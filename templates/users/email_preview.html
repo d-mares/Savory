@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Email Templates Preview - Savory{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <h1 class="mb-4">Email Templates Preview</h1>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h3>Email Confirmation Template</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="email-preview">
+                                {{ confirmation_email|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-12">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h3>Password Reset Template</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="email-preview">
+                                {{ reset_email|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .email-preview {
+        max-width: 600px;
+        margin: 0 auto;
+        border: 1px solid var(--cal-poly-green);
+        border-radius: 5px;
+        overflow: hidden;
+        background-color: var(--mint-cream);
+    }
+    .email-preview .header {
+        text-align: center;
+        padding: 20px 0;
+        margin-bottom: 20px;
+    }
+    .email-preview .header img {
+        max-width: 150px;
+        height: auto;
+    }
+    .email-preview .content {
+        background-color: var(--mint-cream);
+        padding: 20px;
+    }
+    .email-preview .footer {
+        text-align: center;
+        padding: 20px;
+        color: var(--dark-purple);
+        font-size: 14px;
+        background-color: var(--mint-cream);
+        margin-top: 20px;
+    }
+    .email-preview .button {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: var(--cal-poly-green);
+        color: var(--mint-cream);
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+        transition: background-color 0.3s ease;
+    }
+    .email-preview .button:hover {
+        background-color: var(--sgbus-green);
+        color: var(--dark-purple);
+    }
+    .card {
+        background-color: var(--mint-cream);
+        border: 1px solid var(--cal-poly-green);
+        box-shadow: 0 2px 4px rgba(0, 89, 30, 0.1);
+    }
+    .card-header {
+        background-color: var(--cal-poly-green);
+        color: var(--mint-cream);
+        border-bottom: 1px solid var(--cal-poly-green);
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+</style>
+{% endblock %} 
