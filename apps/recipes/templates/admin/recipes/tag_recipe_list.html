@@ -1,0 +1,37 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block content %}
+<div id="content-main">
+    <h1>Recipes with tag: {{ tag.name }}</h1>
+    
+    <div class="module">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Rating</th>
+                    <th>Review Count</th>
+                    <th>Date Published</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in recipes %}
+                <tr>
+                    <td><a href="{% url 'admin:recipes_recipe_change' recipe.id %}">{{ recipe.name }}</a></td>
+                    <td>{{ recipe.recipe_category }}</td>
+                    <td>{{ recipe.aggregated_rating }}</td>
+                    <td>{{ recipe.review_count }}</td>
+                    <td>{{ recipe.date_published }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No recipes found with this tag.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %} 
