@@ -7,7 +7,7 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="text-center">Sign Up</h2>
+                    <h2 class="text-center">Log In</h2>
                 </div>
                 <div class="card-body">
                     <form method="post" class="form">
@@ -26,16 +26,20 @@
                                 {% endif %}
                             </div>
                         {% endfor %}
+                        {% if redirect_field_value %}
+                            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                        {% endif %}
                         <div class="form-group text-center">
-                            <button type="submit" class="btn btn-primary">Sign Up</button>
+                            <button type="submit" class="btn btn-primary">Log In</button>
                         </div>
                     </form>
                     <div class="text-center mt-3">
-                        <p>Already have an account? <a href="{% url 'account_login' %}">Log In</a></p>
+                        <p>Don't have an account? <a href="{% url 'account_signup' %}">Sign Up</a></p>
+                        <p><a href="{% url 'account_reset_password' %}">Forgot Password?</a></p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock %} 

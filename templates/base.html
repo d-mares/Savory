@@ -5,123 +5,214 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Savory{% endblock %}</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
     <style>
-        :root {
-            --sgbus-green: #6DE400;
-            --cal-poly-green: #00591E;
-            --dark-purple: #260A1D;
-            --mint-cream: #fFfffF;
-        }
-        
-        body {
-            background-color: var(--mint-cream);
-            color: var(--dark-purple);
-        }
-        
+        /* Ensure the navbar has enough height for the logo */
         .navbar {
-            background-color: var(--mint-cream) !important;
-            box-shadow: 0 2px 4px rgba(0, 89, 30, 0.1);
+            min-height: 110px;
+            padding-top: 25px;
+        }        
+
+        /* Responsive logo sizing */
+        .navbar-brand img {
+            height: 110px; /* Desktop size */
         }
         
-        .navbar-brand {
-            color: var(--cal-poly-green) !important;
-            font-weight: bold;
+        @media (max-width: 991.98px) {
+            .navbar-brand img {
+                height: 75px; /* Smaller size for mobile devices */
+            }
+            
+            .navbar {
+                min-height: 90px; /* Adjust navbar height for mobile */
+            }
         }
         
-        .nav-link {
-            color: var(--cal-poly-green) !important;
-            transition: color 0.3s ease;
-            font-weight: 500;
+        /* Nav menu styles */
+        .nav-menu .nav-link {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f1f1f1;
         }
         
-        .nav-link:hover {
-            color: var(--sgbus-green) !important;
+        .nav-menu .nav-link:last-child {
+            border-bottom: none;
         }
         
-        .btn-primary {
-            background-color: var(--cal-poly-green);
-            border-color: var(--cal-poly-green);
+        /* Desktop dropdown styling */
+        #desktopNavMenu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 250px;
+            z-index: 1000;
+            background-color: white;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 10px 0;
+            border: 1px solid rgba(0,0,0,0.1);
         }
         
-        .btn-primary:hover {
-            background-color: var(--sgbus-green);
-            border-color: var(--sgbus-green);
+        /* Show desktop dropdown when parent is hovered or focused */
+        .desktop-nav-container:hover #desktopNavMenu,
+        .desktop-nav-container:focus-within #desktopNavMenu {
+            display: block;
         }
         
-        .card {
-            background-color: var(--mint-cream);
-            border: 1px solid var(--cal-poly-green);
-            box-shadow: 0 2px 4px rgba(0, 89, 30, 0.1);
+        /* Search bar styling */
+        .search {
+            width: 100%;
+            height: 50px;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 30px;
+            position: relative;
+            border: 1px solid #e8e8e8;
         }
         
-        .card-header {
-            background-color: var(--cal-poly-green);
-            color: var(--mint-cream);
+        .search-input {
+            border: 0;
+            outline: 0;
+            background: none;
+            width: 100%;
+            font-size: 19px;
+            font-weight: 300;
+            color: black;
+            padding: 0 10px;
+            line-height: 20px;
         }
         
-        .alert-success {
-            background-color: var(--sgbus-green);
-            border-color: var(--cal-poly-green);
-            color: var(--dark-purple);
+        .search-icon {
+            height: 34px;
+            width: 34px;
+            float: right;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: black;
+            font-size: 16px;
+            position: absolute;
+            right: 10px;
+            top: 8px;
+            border-radius: 5px;
         }
         
-        .alert-warning {
-            background-color: var(--mint-cream);
-            border-color: var(--cal-poly-green);
-            color: var(--dark-purple);
+        .search-icon:hover {
+            color: #fff !important;
+            background-color: #00591e;
         }
     </style>
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'home' %}">
-                <img src="{% static 'savory/logo.png' %}" alt="Savory Logo" height="40" class="me-2">
-                Savory
+    <nav class="navbar navbar-light">
+        <div class="container position-relative">
+            <!-- Hamburger menu with different behavior for mobile/desktop -->
+            <div class="position-relative">
+                <!-- Desktop width version (hover dropdown) -->
+                <div class="desktop-nav-container d-none d-lg-block">
+                    <button class="navbar-toggler" type="button" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    
+                    <!-- Desktop dropdown menu (displays on hover/focus) -->
+                    <div id="desktopNavMenu">
+                        <ul class="nav flex-column nav-menu">
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Products</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">About</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#">Contact</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Mobile width version (toggles collapsible menu) -->
+                <button class="navbar-toggler d-lg-none" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#mobileNavMenu"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+          
+            <!-- Logo -->
+            <a class="navbar-brand mx-auto position-absolute top-50 start-50 translate-middle" href="{% url 'home' %}">
+                <img src="{% static 'images/logo.png' %}" alt="Savory Logo">
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'profile' %}">Profile</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'account_logout' %}">Logout</a>
-                        </li>
-                    {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'account_login' %}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'signup' %}">Sign Up</a>
-                        </li>
-                    {% endif %}
-                </ul>
+            
+            <!-- Right side: Search functionality -->
+            <div class="d-flex ms-auto">
+                <!-- Search form for desktop (hidden on mobile) -->
+                <div class="search-form-desktop d-none d-lg-block" style="width: 250px;">
+                    <div class="search">
+                        <input type="text" class="search-input" placeholder="Search..." name="">
+                        <a href="#" class="search-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            
+                <!-- Search icon for mobile (toggles collapse) -->
+                <button class="btn d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#searchCollapse" 
+                        aria-expanded="false" aria-controls="searchCollapse">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </nav>
-
-    {% if messages %}
-    <div class="container mt-3">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">
-            {{ message }}
+    
+    <!-- Mobile dropdown menu (shows below navbar, pushes content down) -->
+    <div class="collapse d-lg-none" id="mobileNavMenu">
+        <div class="container py-2">
+            <ul class="nav flex-column nav-menu">
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">About</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">Contact</a>
+                </li>
+            </ul>
         </div>
-        {% endfor %}
     </div>
-    {% endif %}
+      
+    <!-- Collapsible Search Bar (mobile only) -->
+    <div class="collapse d-lg-none" id="searchCollapse">
+        <div class="container py-2">
+            <div class="search">
+                <input type="text" class="search-input" placeholder="Search..." name="">
+                <a href="#" class="search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
 
-    {% block content %}
-    {% endblock %}
+    <div class="container mt-5 pt-5">
+        {% block content %}
+        {% endblock %}
+    </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
