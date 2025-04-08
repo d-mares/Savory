@@ -5,11 +5,74 @@
 
 {% block content %}
 <div class="container mt-5">
-    <div class="row">
-        <div class="col-md-12 text-center">
-            <h1>Welcome to Savory</h1>
-            <p class="lead">Your personal recipe companion</p>
+    {% if carousel_items %}
+        <div class="row mt-5">
+            <div class="col-12">
+                <div id="recipeCarousel" class="carousel slide" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        {% for item in carousel_items %}
+                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                <img src="{{ item.image.url }}" class="d-block w-100" alt="{{ item.recipe.name }}">
+                                <div class="carousel-caption d-none d-md-block">
+                                    <h5>{{ item.recipe.name }}</h5>
+                                    <p>{{ item.recipe.description|truncatewords:20 }}</p>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#recipeCarousel" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Previous</span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#recipeCarousel" data-bs-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="visually-hidden">Next</span>
+                    </button>
+                </div>
+            </div>
         </div>
-    </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">My Recipes</h5>
+                        <p class="card-text">View, create, and manage your recipe collection.</p>
+                        <a href="#" class="btn btn-primary">Go to Recipes</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Shopping Lists</h5>
+                        <p class="card-text">Create and manage your shopping lists.</p>
+                        <a href="#" class="btn btn-primary">Go to Shopping Lists</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Nutrition Tracking</h5>
+                        <p class="card-text">Track your nutritional intake and goals.</p>
+                        <a href="#" class="btn btn-primary">View Nutrition</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <p class="mb-4">Join Savory to start managing your recipes, create shopping lists, and track your nutrition.</p>
+                <div class="d-grid gap-2 d-md-block">
+                    <a href="{% url 'account_login' %}" class="btn btn-primary me-md-2">Log In</a>
+                    <a href="{% url 'account_signup' %}" class="btn btn-outline-primary">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

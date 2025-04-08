@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Recipe, RecipeImage
+from .models import Recipe, RecipeImage, CarouselItem
 import logging
 
 logger = logging.getLogger(__name__)
@@ -9,7 +9,11 @@ logger = logging.getLogger(__name__)
 # Create your views here.
 
 def home(request):
-    return render(request, 'recipes/home.html')
+    """Homepage view."""
+    carousel_items = CarouselItem.objects.filter(active=True).order_by('order').select_related('recipe', 'image')
+    return render(request, 'recipes/home.html', {
+        'carousel_items': carousel_items,
+    })
 
 @staff_member_required
 def recipe_images(request, recipe_id):
