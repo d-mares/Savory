@@ -4,7 +4,7 @@ from django.urls import path, reverse
 from django.shortcuts import render
 from django.db import models
 from django.db.models import Q
-from .models import Recipe, RecipeStep, Ingredient, RecipeIngredient, Tag, RecipeTag, RecipeImage
+from .models import Recipe, RecipeStep, Ingredient, RecipeIngredient, Tag, RecipeTag, RecipeImage, CarouselItem
 
 class RecipeImageInline(admin.TabularInline):
     model = RecipeImage
@@ -99,6 +99,14 @@ class RecipeImageAdmin(admin.ModelAdmin):
     list_filter = ('recipe', 'created_at')
     search_fields = ('recipe__name', 'url')
     readonly_fields = ('preview', 'created_at')
+    autocomplete_fields = ['recipe']
+    
+    def get_search_results(self, request, queryset, search_term):
+        # If there's a recipe_id in the GET parameters, filter by that recipe
+        recipe_id = request.GET.get('recipe_id')
+        if recipe_id:
+            queryset = queryset.filter(recipe_id=recipe_id)
+        return super().get_search_results(request, queryset, search_term)
     
     def preview(self, obj):
         if obj.url:
@@ -216,3 +224,55 @@ class RecipeTagAdmin(admin.ModelAdmin):
     list_filter = ('recipe', 'tag')
     search_fields = ('recipe__name', 'tag__name')
     ordering = ('recipe', 'tag')
+
+@admin.register(CarouselItem)
+class CarouselItemAdmin(admin.ModelAdmin):
+    list_display = ('recipe', 'image_preview', 'order', 'active', 'created_at')
+    list_filter = ('active', 'created_at')
+    search_fields = ('recipe__name',)
+    ordering = ('order',)
+    actions = ['delete_selected']
+    autocomplete_fields = ['recipe']
+    readonly_fields = ('image_preview', 'created_at', 'updated_at')
+    fields = ('recipe', 'image', 'order', 'active', 'image_preview')
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('recipe', 'image')
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "recipe":
+            kwargs["queryset"] = Recipe.objects.order_by('-aggregated_rating')
+        elif db_field.name == "image":
+            # Start with an empty queryset
+            kwargs["queryset"] = RecipeImage.objects.none()
+            
+            # If we have a recipe_id (either from existing object or POST data)
+            recipe_id = None
+            if request.resolver_match.kwargs.get('object_id'):
+                carousel_item = self.get_object(request, request.resolver_match.kwargs['object_id'])
+                if carousel_item:
+                    recipe_id = carousel_item.recipe_id
+                    kwargs["queryset"] = RecipeImage.objects.filter(recipe_id=recipe_id)
+            elif request.method == 'POST':
+                recipe_id = request.POST.get('recipe')
+                if recipe_id:
+                    kwargs["queryset"] = RecipeImage.objects.filter(recipe_id=recipe_id)
+        
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def image_preview(self, obj):
+        if obj.image and obj.image.url:
+            return format_html(
+                '<img src="{}" style="max-height: 100px; max-width: 100px;" alt="Preview of {}" />',
+                obj.image.url,
+                obj.recipe.name if obj.recipe else "selected image"
+            )
+        return "No image"
+    image_preview.short_description = 'Preview'
+
+    class Media:
+        js = (
+            'admin/js/jquery.init.js',
+            'admin/js/core.js',
+            'admin/js/carousel_item_admin.js',
+        )

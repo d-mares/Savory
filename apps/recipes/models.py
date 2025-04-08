@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+import logging
 
 class Recipe(models.Model):
     recipe_id = models.IntegerField(unique=True)
@@ -104,3 +105,50 @@ class RecipeTag(models.Model):
 
     def __str__(self):
         return f"{self.recipe.name} - {self.tag.name}"
+
+class CarouselItem(models.Model):
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='carousel_items')
+    image = models.ForeignKey(RecipeImage, on_delete=models.CASCADE)
+    order = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'Carousel Item'
+        verbose_name_plural = 'Carousel Items'
+
+    def __str__(self):
+        return f"{self.recipe.name} - {self.order}"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.debug(f"Validating CarouselItem - Recipe ID: {self.recipe_id}, Image ID: {self.image_id}")
+        
+        if not self.recipe_id:
+            raise ValidationError({'recipe': 'Recipe is required.'})
+            
+        if not self.image_id:
+            raise ValidationError({'image': 'Image is required.'})
+
+        try:
+            # Get the actual RecipeImage object
+            image = RecipeImage.objects.select_related('recipe').get(id=self.image_id)
+            logger.debug(f"Found image. Image recipe_id: {image.recipe_id}, Selected recipe_id: {self.recipe_id}")
+            logger.debug(f"Image details: {image.__dict__}")
+            logger.debug(f"Recipe details: {self.recipe.__dict__}")
+            
+            if image.recipe_id != self.recipe_id:
+                logger.error(f"Image validation failed: Image recipe_id ({image.recipe_id}) != Selected recipe_id ({self.recipe_id})")
+                raise ValidationError({
+                    'image': f'The selected image (ID: {self.image_id}) must belong to the selected recipe (ID: {self.recipe_id}). Image belongs to recipe ID: {image.recipe_id}'
+                })
+        except RecipeImage.DoesNotExist:
+            logger.error(f"Image with ID {self.image_id} does not exist")
+            raise ValidationError({
+                'image': f'The selected image (ID: {self.image_id}) does not exist.'
+            })
