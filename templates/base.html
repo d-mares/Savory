@@ -9,6 +9,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_css %}{% endblock %}
     <style>
+        /* Container width adjustments */
+        @media (min-width: 1400px) {
+            .container {
+                max-width: 1600px;
+            }
+        }
+        
+        @media (min-width: 1800px) {
+            .container {
+                max-width: 1800px;
+            }
+        }
+
         /* Ensure the navbar has enough height for the logo */
         .navbar {
             min-height: 110px;

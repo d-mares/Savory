@@ -1,0 +1,219 @@
+/* Container styling */
+.carousel-section {
+    background-color: #f8f4e4;
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+/* Heading and divider */
+.carousel-section h2 {
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.recipe-divider {
+    width: 60px;
+    height: 3px;
+    background-color: #6c757d;
+    margin: 0 auto 30px;
+    border: none;
+    opacity: 0.8;
+}
+
+/* Carousel container */
+.carousel-container {
+    max-width: 100%;
+    margin: 0 auto;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+/* Responsive carousel height based on screen size */
+.custom-carousel {
+    position: relative;
+    background-color: #f8f4e4;
+    /* Base height for small screens */
+    height: 300px;
+}
+
+/* Responsive height adjustments */
+@media (min-width: 576px) {
+    .custom-carousel {
+        height: 350px;
+    }
+}
+
+@media (min-width: 768px) {
+    .custom-carousel {
+        height: 400px;
+    }
+}
+
+@media (min-width: 992px) {
+    .custom-carousel {
+        height: 500px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .custom-carousel {
+        height: 600px;
+    }
+}
+
+/* Image wrapper and positioning */
+.carousel-image-wrapper {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f8f4e4;
+    padding: 15px;  /* Add some padding inside to prevent images touching edges */
+}
+
+/* Updated image styling to fill more of the container while maintaining aspect ratio */
+.carousel-image {
+    height: 100%;  /* Let height adjust based on width */
+    width: auto;   /* Let width adjust based on height */
+    max-height: 100%;  /* Don't exceed container height */
+    max-width: 100%;   /* Don't exceed container width */
+    min-height: 80%;   /* Ensure image takes up at least 80% of container height */
+    object-fit: cover; 
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);  /* Optional: adds a subtle shadow */
+}
+
+/* Controls styling */
+.custom-control {
+    width: 10%;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.custom-control span {
+    background-size: 100% 100%;
+    width: 30px;
+    height: 30px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    padding: 20px;
+    background-position: center;
+}
+
+/* Make controls more visible on larger screens */
+@media (min-width: 992px) {
+    .custom-control span {
+        width: 40px;
+        height: 40px;
+        padding: 25px;
+    }
+}
+
+/* Caption and hover effects */
+@media (min-width: 768px) {
+    .carousel-item .carousel-caption {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        padding: 15px;
+        max-width: 80%;  /* Prevent captions from stretching too wide */
+        margin: 0 auto;  /* Center the caption */
+    }
+    
+    .carousel-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0);
+        transition: background-color 0.3s ease;
+        z-index: 1;
+    }
+    
+    .custom-carousel:hover .carousel-caption {
+        opacity: 1;
+    }
+    
+    .custom-carousel:hover .custom-control {
+        opacity: 1;
+    }
+    
+    .custom-carousel:hover .carousel-item::before {
+        background-color: rgba(0, 0, 0, 0.2);
+    }
+    
+    .custom-control:hover span {
+        background-color: rgba(255, 255, 255, 0.3);
+    }
+}
+
+/* Mobile styling */
+@media (max-width: 767px) {
+    .carousel-caption {
+        display: block;
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 8px;
+        padding: 10px;
+        max-width: 90%;  /* Prevent captions from stretching too wide */
+        margin: 0 auto;  /* Center the caption */
+    }
+    
+    .custom-control {
+        opacity: 1;
+    }
+    
+    .carousel-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.2);
+        z-index: 1;
+    }
+}
+
+/* Indicators */
+.carousel-indicators {
+    margin-bottom: 1rem;
+    z-index: 5;
+}
+
+.carousel-indicators button {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin: 0 5px;
+}
+
+/* Slightly larger indicators on bigger screens */
+@media (min-width: 992px) {
+    .carousel-indicators button {
+        width: 12px;
+        height: 12px;
+    }
+}
+
+/* Ensure caption is above the overlay */
+.carousel-caption {
+    z-index: 2;
+    bottom: 20px;
+}
+
+/* Larger text for captions on bigger screens */
+@media (min-width: 992px) {
+    .carousel-caption h5 {
+        font-size: 1.4rem;
+    }
+    
+    .carousel-caption p {
+        font-size: 1.1rem;
+    }
+}
