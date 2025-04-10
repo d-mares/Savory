@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ recipe.name }} - Savory{% endblock %}
+
+{% block extra_css %}
+<style>
+    .main-image {
+        width: 100%;
+        height: 400px;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    .thumbnail-container {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+    .thumbnail {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .thumbnail:hover {
+        transform: scale(1.05);
+    }
+    .thumbnail.active {
+        border: 3px solid #0d6efd;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8">
+            {% if images %}
+                <div class="image-gallery mb-4">
+                    <img src="{{ images.0.url }}" class="main-image" id="mainImage" alt="{{ recipe.name }}">
+                    <div class="thumbnail-container">
+                        {% for image in images %}
+                            <img src="{{ image.url }}" 
+                                 class="thumbnail {% if forloop.first %}active{% endif %}" 
+                                 alt="{{ recipe.name }} - Image {{ forloop.counter }}"
+                                 onclick="changeMainImage(this, '{{ image.url }}')">
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <h1>{{ recipe.name | safe }}</h1>
+            <p class="text-muted">{{ recipe.description }}</p>
+            
+            <div class="row mt-4">
+                <div class="col-md-4">
+                    <h5>Prep Time</h5>
+                    <p>{{ recipe.prep_time|default:"Not specified" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Cook Time</h5>
+                    <p>{{ recipe.cook_time|default:"Not specified" }}</p>
+                </div>
+                <div class="col-md-4">
+                    <h5>Total Time</h5>
+                    <p>{{ recipe.total_time|default:"Not specified" }}</p>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <h3>Ingredients</h3>
+                    <ul class="list-group">
+                        {% for ingredient in recipe.recipe_ingredients.all %}
+                            <li class="list-group-item">{{ ingredient.raw_string }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h3>Nutrition Information</h3>
+                    <ul class="list-group">
+                        <li class="list-group-item">Calories: {{ recipe.calories }} kcal</li>
+                        <li class="list-group-item">Protein: {{ recipe.protein_content }}g</li>
+                        <li class="list-group-item">Carbohydrates: {{ recipe.carbohydrate_content }}g</li>
+                        <li class="list-group-item">Fat: {{ recipe.fat_content }}g</li>
+                        <li class="list-group-item">Fiber: {{ recipe.fiber_content }}g</li>
+                        <li class="list-group-item">Sugar: {{ recipe.sugar_content }}g</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h3>Instructions</h3>
+                <ol class="list-group list-group-numbered">
+                    {% for step in recipe.steps.all %}
+                        <li class="list-group-item">{{ step.description }}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Recipe Details</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">Category: {{ recipe.recipe_category }}</li>
+                        <li class="list-group-item">Rating: {{ recipe.aggregated_rating }}/5 ({{ recipe.review_count }} reviews)</li>
+                        <li class="list-group-item">Servings: {{ recipe.servings }}</li>
+                        <li class="list-group-item">Serving Size: {{ recipe.serving_size }}</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h5>Tags</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for tag in recipe.recipe_tags.all %}
+                        <span class="badge bg-primary">{{ tag.tag.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    function changeMainImage(thumbnail, imageUrl) {
+        // Update main image
+        document.getElementById('mainImage').src = imageUrl;
+        
+        // Update active thumbnail
+        document.querySelectorAll('.thumbnail').forEach(thumb => {
+            thumb.classList.remove('active');
+        });
+        thumbnail.classList.add('active');
+    }
+</script>
+{% endblock %}
+{% endblock %} 

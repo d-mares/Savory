@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from .models import Recipe, RecipeImage, CarouselItem
@@ -13,6 +13,15 @@ def home(request):
     carousel_items = CarouselItem.objects.filter(active=True).order_by('order').select_related('recipe', 'image')
     return render(request, 'recipes/home.html', {
         'carousel_items': carousel_items,
+    })
+
+def recipe_detail(request, recipe_id):
+    """Recipe detail view."""
+    recipe = get_object_or_404(Recipe, recipe_id=recipe_id)
+    images = recipe.images.all().order_by('order')
+    return render(request, 'recipes/recipe_detail.html', {
+        'recipe': recipe,
+        'images': images,
     })
 
 @staff_member_required

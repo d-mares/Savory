@@ -69,15 +69,17 @@
                     
                     <div class="carousel-inner">
                         {% for item in carousel_items %}
-                            <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                <div class="carousel-image-wrapper">
-                                    <img src="{{ item.image.url}}" class="carousel-image" alt="{{ item.recipe.name }}">
+                            <a href="{% url 'recipes:recipe_detail' recipe_id=item.recipe.recipe_id %}" class="text-decoration-none text-dark">
+                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                    <div class="carousel-image-wrapper">
+                                        <img src="{{ item.image.url}}" class="carousel-image" alt="{{ item.recipe.name }}">
+                                    </div>
+                                    <div class="carousel-caption">
+                                        <h5>{{ item.recipe.name | safe }}</h5>
+                                        <p>{{ item.recipe.description|truncatewords:20 }}</p>
+                                    </div>
                                 </div>
-                                <div class="carousel-caption">
-                                    <h5>{{ item.recipe.name | safe }}</h5>
-                                    <p>{{ item.recipe.description|truncatewords:20 }}</p>
-                                </div>
-                            </div>
+                            </a>
                         {% endfor %}
                     </div>
                     
@@ -93,7 +95,5 @@
             </div>
         </div>
     {% endif %}
-
-    
 </div>
 {% endblock %}
