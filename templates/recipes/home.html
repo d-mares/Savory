@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
+{% load recipe_filters %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/carousel.css' %}">
+<link rel="stylesheet" href="{% static 'css/recipe_cards.css' %}">
 {% endblock %}
 
 {% block title %}Home - Savory{% endblock %}
@@ -53,47 +54,69 @@
 
     {% if carousel_items %}
         <div class="carousel-section">
-            <h2 class="text-center">Featured Recipes</h2>
+            <h2>Featured Recipes</h2>
             <hr class="recipe-divider">
             
-            <div class="carousel-container">
-                <div id="recipeCarousel" class="carousel slide custom-carousel" data-bs-ride="carousel">
-                    <!-- Carousel indicators -->
-                    <div class="carousel-indicators">
-                        {% for item in carousel_items %}
-                            <button type="button" data-bs-target="#recipeCarousel" data-bs-slide-to="{{ forloop.counter0 }}" 
-                                {% if forloop.first %}class="active" aria-current="true"{% endif %} 
-                                aria-label="Slide {{ forloop.counter }}"></button>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="carousel-inner">
-                        {% for item in carousel_items %}
-                            <a href="{% url 'recipes:recipe_detail' recipe_id=item.recipe.recipe_id %}" class="text-decoration-none text-dark">
-                                <div class="carousel-item {% if forloop.first %}active{% endif %}">
-                                    <div class="carousel-image-wrapper">
-                                        <img src="{{ item.image.url}}" class="carousel-image" alt="{{ item.recipe.name }}">
-                                    </div>
-                                    <div class="carousel-caption">
-                                        <h5>{{ item.recipe.name | safe }}</h5>
-                                        <p>{{ item.recipe.description|truncatewords:20 }}</p>
-                                    </div>
+            <div class="recipe-cards-container">
+                {% for item in carousel_items %}
+                    <div class="recipe-card">
+                        <div class="card-header" style="background-image: url('{{ item.image.url }}')">
+                            <div class="icon">
+                                <a href="#" class="heart-link"><i class="fa fa-heart-o"></i></a>
+                            </div>
+                        </div>
+                        <div class="card-content">
+                            <h1>{{ item.recipe.name | safe}}</h1>
+                            <div class="recipe-meta">
+                                <div class="recipe-info">
+                                    {% with total_time=item.recipe.prep_time|add:item.recipe.cook_time %}
+                                        <span><i class="fa fa-clock-o"></i> {{ total_time|format_time }}</span>
+                                    {% endwith %}
+                                    <span><i class="fa fa-users"></i> <span class='serves-text'>Serves</span> {{ item.recipe.servings }}</span>
                                 </div>
-                            </a>
-                        {% endfor %}
+                                <div class="stars">
+                                    <li>
+                                        <span class="review-count">({{ item.recipe.review_count }})</span>
+                                        {% for i in "12345"|make_list %}
+                                            {% if forloop.counter <= item.recipe.aggregated_rating %}
+                                                <a href="#"><i class="fa fa-star"></i></a>
+                                            {% else %}
+                                                <a href="#"><i class="fa fa-star-o"></i></a>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </li>
+                                </div>
+                            </div>
+                            <a href="{% url 'recipes:recipe_detail' recipe_id=item.recipe.recipe_id %}" class="btn">Let's Cook!</a>
+                        </div>
                     </div>
-                    
-                    <button class="carousel-control-prev custom-control" type="button" data-bs-target="#recipeCarousel" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Previous</span>
-                    </button>
-                    <button class="carousel-control-next custom-control" type="button" data-bs-target="#recipeCarousel" data-bs-slide="next">
-                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                        <span class="visually-hidden">Next</span>
-                    </button>
-                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="carousel-nav">
+                <button onclick="scrollCards('left')"><i class="fa fa-chevron-left"></i></button>
+                <button onclick="scrollCards('right')"><i class="fa fa-chevron-right"></i></button>
             </div>
         </div>
     {% endif %}
 </div>
+
+<script>
+function scrollCards(direction) {
+    const container = document.querySelector('.recipe-cards-container');
+    const scrollAmount = 420; // Updated to match new card width + gap
+    
+    if (direction === 'left') {
+        container.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    } else {
+        container.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    }
+}
+</script>
 {% endblock %}

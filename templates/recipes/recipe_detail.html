@@ -76,7 +76,7 @@
                     <h3>Ingredients</h3>
                     <ul class="list-group">
                         {% for ingredient in recipe.recipe_ingredients.all %}
-                            <li class="list-group-item">{{ ingredient.raw_string }}</li>
+                            <li class="list-group-item">{{ ingredient.raw_string | safe }}</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -97,7 +97,7 @@
                 <h3>Instructions</h3>
                 <ol class="list-group list-group-numbered">
                     {% for step in recipe.steps.all %}
-                        <li class="list-group-item">{{ step.description }}</li>
+                        <li class="list-group-item">{{ step.description | safe }}</li>
                     {% endfor %}
                 </ol>
             </div>
