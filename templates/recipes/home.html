@@ -56,9 +56,9 @@
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h5 class="card-title">Nutrition Tracking</h5>
-                        <p class="card-text">Track your nutritional intake and goals.</p>
-                        <a href="#" class="btn btn-primary">View Nutrition</a>
+                        <h5 class="card-title">Pantry Management</h5>
+                        <p class="card-text">Track and manage your pantry ingredients.</p>
+                        <a href="{% url 'pantry:pantry_list' %}" class="btn btn-primary">Manage Pantry</a>
                     </div>
                 </div>
             </div>
@@ -66,7 +66,7 @@
     {% else %}
         <div class="row justify-content-center">
             <div class="col-md-8 text-center">
-                <p class="mb-4">Join Savory to start managing your recipes, create shopping lists, and track your nutrition.</p>
+                <p class="mb-4">Join Savory to start managing your recipes, create shopping lists, and track your pantry.</p>
                 <div class="d-grid gap-2 d-md-block">
                     <a href="#" class="btn btn-primary me-md-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log In</a>
                     <a href="{% url 'account_signup' %}" class="btn btn-outline-primary">Sign Up</a>
