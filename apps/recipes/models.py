@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.conf import settings
 import logging
 
 class Recipe(models.Model):
@@ -152,3 +153,16 @@ class CarouselItem(models.Model):
             raise ValidationError({
                 'image': f'The selected image (ID: {self.image_id}) does not exist.'
             })
+
+class UserRecipeCollection(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='recipe_collection')
+    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='collected_by')
+    added_at = models.DateTimeField(auto_now_add=True)
+    category = models.CharField(max_length=100, null=True, blank=True)
+
+    class Meta:
+        unique_together = ['user', 'recipe']
+        ordering = ['-added_at']
+
+    def __str__(self):
+        return f"{self.user.username}'s collection - {self.recipe.name}"

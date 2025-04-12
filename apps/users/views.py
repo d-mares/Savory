@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from .forms import CustomUserCreationForm
+from django.http import JsonResponse
+import json
 
 # Create your views here.
 
@@ -61,3 +63,30 @@ def preview_emails(request):
         'reset_email': reset_email,
     }
     return render(request, 'users/email_preview.html', context)
+
+@login_required
+def update_username(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_username = data.get('username', '').strip()
+            if new_username:
+                request.user.username = new_username
+                request.user.save()
+                return JsonResponse({
+                    'success': True,
+                    'username': new_username
+                })
+            return JsonResponse({
+                'success': False,
+                'error': 'Username cannot be empty'
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid JSON data'
+            })
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method'
+    })

@@ -4,12 +4,35 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/recipe_cards.css' %}">
+<style>
+    @media (max-width: 992px) {
+        .container {
+            max-width: 100%;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+    }
+    .heart-link {
+        color: white;
+        font-size: 1.5rem;
+        text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .heart-link:hover {
+        transform: scale(1.1);
+    }
+    .heart-link.filled {
+        color: #ff4444;
+    }
+</style>
 {% endblock %}
 
 {% block title %}Home - Savory{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
+    {% csrf_token %}
     {% if user.is_authenticated %}
         <div class="row">
             <div class="col-md-4 mb-4">
@@ -17,7 +40,7 @@
                     <div class="card-body">
                         <h5 class="card-title">My Recipes</h5>
                         <p class="card-text">View, create, and manage your recipe collection.</p>
-                        <a href="#" class="btn btn-primary">Go to Recipes</a>
+                        <a href="{% url 'recipes:personal_recipes' %}" class="btn btn-primary">Go to Recipes</a>
                     </div>
                 </div>
             </div>
@@ -45,7 +68,7 @@
             <div class="col-md-8 text-center">
                 <p class="mb-4">Join Savory to start managing your recipes, create shopping lists, and track your nutrition.</p>
                 <div class="d-grid gap-2 d-md-block">
-                    <a href="{% url 'account_login' %}" class="btn btn-primary me-md-2">Log In</a>
+                    <a href="#" class="btn btn-primary me-md-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log In</a>
                     <a href="{% url 'account_signup' %}" class="btn btn-outline-primary">Sign Up</a>
                 </div>
             </div>
@@ -62,7 +85,10 @@
                     <div class="recipe-card">
                         <div class="card-header" style="background-image: url('{{ item.image.url }}')">
                             <div class="icon">
-                                <a href="#" class="heart-link"><i class="fa fa-heart-o"></i></a>
+                                <a href="#" class="heart-link {% if item.recipe in user_recipe_collection %}filled{% endif %}" 
+                                   data-recipe-id="{{ item.recipe.recipe_id }}">
+                                    <i class="fa {% if item.recipe in user_recipe_collection %}fa-heart{% else %}fa-heart-o{% endif %}"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="card-content">
@@ -118,5 +144,49 @@ function scrollCards(direction) {
         });
     }
 }
+
+// Handle heart icon clicks
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.heart-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const recipeId = this.dataset.recipeId;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            fetch(`/recipes/recipe/${recipeId}/toggle-collection/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update all heart icons for this recipe
+                    document.querySelectorAll(`.heart-link[data-recipe-id="${recipeId}"]`).forEach(link => {
+                        if (data.is_in_collection) {
+                            link.classList.add('filled');
+                            link.innerHTML = '<i class="fa fa-heart"></i>';
+                        } else {
+                            link.classList.remove('filled');
+                            link.innerHTML = '<i class="fa fa-heart-o"></i>';
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('There was an error updating your collection. Please try again.');
+            });
+        });
+    });
+});
 </script>
 {% endblock %}

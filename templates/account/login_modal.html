@@ -1,0 +1,268 @@
+{% load i18n %}
+{% load allauth account %}
+
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="loginModalLabel">Sign In</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Login Form -->
+                <div id="loginForm" class="auth-form">
+                    <form class="login" method="POST" action="{% url 'account_login' %}" id="loginFormElement">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_login" class="form-label">Email</label>
+                            <input type="email" name="login" class="form-control" id="id_login" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_password" class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" id="id_password" required>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="remember" class="form-check-input" id="id_remember">
+                            <label class="form-check-label" for="id_remember">Remember me</label>
+                        </div>
+                        {% if redirect_field_value %}
+                            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                        {% endif %}
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" type="submit">{% trans "Sign In" %}</button>
+                        </div>
+                        <!-- Error Alert -->
+                        <div id="loginError" class="alert alert-danger mt-3 mb-0 d-none" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <span id="loginErrorText"></span>
+                        </div>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p class="mb-0">{% trans "Don't have an account?" %} <a href="#" class="text-primary toggle-form" data-form="signup">{% trans "Sign Up" %}</a></p>
+                    </div>
+                </div>
+
+                <!-- Signup Form -->
+                <div id="signupForm" class="auth-form" style="display: none;">
+                    <form class="signup" method="POST" action="{% url 'account_signup' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" id="id_email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_password1" class="form-label">Password</label>
+                            <input type="password" name="password1" class="form-control" id="id_password1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_password2" class="form-label">Password (again)</label>
+                            <input type="password" name="password2" class="form-control" id="id_password2" required>
+                        </div>
+                        {% if redirect_field_value %}
+                            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                        {% endif %}
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" type="submit">{% trans "Sign Up" %}</button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-3">
+                        <p class="mb-0">{% trans "Already have an account?" %} <a href="#" class="text-primary toggle-form" data-form="login">{% trans "Sign In" %}</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop fade" id="loginBackdrop" style="display: none;"></div>
+
+<style>
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(3px);
+    z-index: 1040;
+    opacity: 0;
+    transition: opacity 0.15s linear;
+}
+
+/* Exclude navbar from blur effect */
+.modal-backdrop::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px; /* Adjust this value based on your navbar height */
+    background-color: transparent;
+    backdrop-filter: none;
+    z-index: 1;
+}
+
+.modal-backdrop.show {
+    opacity: 1;
+}
+
+.modal {
+    z-index: 1050;
+}
+
+.modal-content {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-dialog {
+    max-width: 400px;
+}
+
+.form-control:focus {
+    border-color: #00591e;
+    box-shadow: 0 0 0 0.25rem rgba(0, 89, 30, 0.25);
+}
+
+.btn-primary {
+    background-color: #00591e;
+    border-color: #00591e;
+}
+
+.btn-primary:hover {
+    background-color: #004716;
+    border-color: #004716;
+}
+
+.alert {
+    border-radius: 8px;
+    margin-bottom: 0;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginFormElement');
+    const loginError = document.getElementById('loginError');
+    const loginErrorText = document.getElementById('loginErrorText');
+
+    // Handle form toggling
+    document.querySelectorAll('.toggle-form').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetForm = this.dataset.form;
+            const loginForm = document.getElementById('loginForm');
+            const signupForm = document.getElementById('signupForm');
+            const modalTitle = document.getElementById('loginModalLabel');
+            
+            if (targetForm === 'signup') {
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+                modalTitle.textContent = 'Sign Up';
+            } else {
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+                modalTitle.textContent = 'Sign In';
+            }
+            // Hide error when switching forms
+            loginError.classList.add('d-none');
+        });
+    });
+
+    // Handle login form submission
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text();
+                }
+            })
+            .then(html => {
+                if (html) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // First check for form-level errors
+                    const nonFieldErrors = doc.querySelector('.errorlist.nonfield') || 
+                                         doc.querySelector('.non-field-errors');
+                    
+                    // Then check for errors on specific fields
+                    const emailErrors = doc.querySelector('#id_login').closest('.form-group')?.querySelector('.errorlist');
+                    const passwordErrors = doc.querySelector('#id_password').closest('.form-group')?.querySelector('.errorlist');
+                    
+                    // Compile all errors
+                    let errorMessage = '';
+                    if (nonFieldErrors) errorMessage += nonFieldErrors.textContent.trim();
+                    if (emailErrors) errorMessage += ' ' + emailErrors.textContent.trim();
+                    if (passwordErrors) errorMessage += ' ' + passwordErrors.textContent.trim();
+                    
+                    // If we found errors, display them
+                    if (errorMessage.trim()) {
+                        loginErrorText.textContent = errorMessage.trim();
+                        loginError.classList.remove('d-none');
+                    } else if (html.includes('username and/or password') || html.includes('incorrect')) {
+                        // Fallback check for common error messages in the response text
+                        loginErrorText.textContent = 'The username and/or password you specified are not correct.';
+                        loginError.classList.remove('d-none');
+                    } else {
+                        // Generic error if we can't find a specific one
+                        loginErrorText.textContent = 'An error occurred. Please try again.';
+                        loginError.classList.remove('d-none');
+                    }
+                    
+                    // Scroll to error message
+                    loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            })
+        });
+    }
+
+    // Handle modal backdrop
+    const modal = document.getElementById('loginModal');
+    const backdrop = document.getElementById('loginBackdrop');
+    
+    if (modal) {
+        modal.addEventListener('show.bs.modal', function() {
+            backdrop.style.display = 'block';
+            setTimeout(() => backdrop.classList.add('show'), 10);
+            // Clear any previous errors when modal is opened
+            loginError.classList.add('d-none');
+        });
+        
+        modal.addEventListener('hide.bs.modal', function() {
+            backdrop.classList.remove('show');
+            setTimeout(() => backdrop.style.display = 'none', 150);
+        });
+    }
+});
+</script> 

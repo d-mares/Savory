@@ -1,43 +1,151 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load i18n %}
+{% load account %}
 
 {% block title %}Profile - Savory{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container py-5">
     <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h2>Profile</h2>
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="mb-0">{% trans "Account Information" %}</h2>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Username:</strong> {{ user.username }}</p>
-                            <p><strong>Email:</strong> {{ user.email }}</p>
-                            <p><strong>Email Verified:</strong> 
-                                {% if is_verified %}
-                                    <span class="badge bg-success">Verified</span>
-                                {% else %}
-                                    <span class="badge bg-warning">Not Verified</span>
-                                {% endif %}
-                            </p>
-                            <p><strong>Date Joined:</strong> {{ user.date_joined|date }}</p>
+                    <div class="mb-4">
+                        <h5 class="card-title">Username</h5>
+                        <div class="d-flex align-items-center">
+                            <div id="usernameDisplay" class="me-2">
+                                <span class="h4 mb-0">{{ user.username }}</span>
+                                <button class="btn btn-link p-0 ms-2" id="editUsernameBtn">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                            </div>
+                            <div id="usernameEdit" class="d-none">
+                                <div class="d-flex align-items-center">
+                                    <input type="text" id="usernameInput" class="form-control me-2" value="{{ user.username }}" pattern="[a-zA-Z0-9_]+" title="Only letters, numbers, and underscores are allowed">
+                                    <button class="btn btn-success me-2" id="saveUsernameBtn">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button class="btn btn-secondary" id="cancelUsernameBtn">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div id="usernameError" class="text-danger mt-2" style="display: none;"></div>
+                            </div>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <div class="alert {% if is_verified %}alert-success{% else %}alert-warning{% endif %}">
-                            {{ verification_message }}
+
+                    <div class="mb-4">
+                        <h5 class="card-title">Email</h5>
+                        <p class="mb-1">{{ user.email }}</p>
+                        {% with email_address=user.emailaddress_set.get_primary %}
+                            {% if email_address and not email_address.verified %}
+                                <div class="alert alert-warning mt-2">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    {% trans "Your email address is not verified. Please verify it to receive notifications." %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="mb-4">
+                        <h5 class="card-title">Account Actions</h5>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'account_email' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-envelope me-2"></i>{% trans "Manage Email" %}
+                            </a>
+                            <a href="{% url 'account_change_password' %}" class="btn btn-outline-primary">
+                                <i class="fas fa-key me-2"></i>{% trans "Change Password" %}
+                            </a>
+                            <a href="{% url 'account_logout' %}" class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i>{% trans "Sign Out" %}
+                            </a>
                         </div>
-                        {% if not is_verified %}
-                            <p>Please check your email for the verification link. If you haven't received it, you can request a new one.</p>
-                            <a href="{% url 'account_email' %}" class="btn btn-primary">Manage Email</a>
-                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const usernameDisplay = document.getElementById('usernameDisplay');
+    const usernameEdit = document.getElementById('usernameEdit');
+    const editUsernameBtn = document.getElementById('editUsernameBtn');
+    const saveUsernameBtn = document.getElementById('saveUsernameBtn');
+    const cancelUsernameBtn = document.getElementById('cancelUsernameBtn');
+    const usernameInput = document.getElementById('usernameInput');
+    const usernameError = document.getElementById('usernameError');
+
+    editUsernameBtn.addEventListener('click', function() {
+        usernameDisplay.classList.add('d-none');
+        usernameEdit.classList.remove('d-none');
+        usernameInput.focus();
+    });
+
+    cancelUsernameBtn.addEventListener('click', function() {
+        usernameEdit.classList.add('d-none');
+        usernameDisplay.classList.remove('d-none');
+        usernameInput.value = '{{ user.username }}';
+        usernameError.style.display = 'none';
+    });
+
+    saveUsernameBtn.addEventListener('click', function() {
+        const newUsername = usernameInput.value.trim();
+        
+        // Validate username
+        if (!newUsername) {
+            usernameError.textContent = 'Username cannot be empty';
+            usernameError.style.display = 'block';
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+            usernameError.textContent = 'Username can only contain letters, numbers, and underscores';
+            usernameError.style.display = 'block';
+            return;
+        }
+
+        // Send AJAX request to update username
+        fetch('{% url "users:update_username" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                username: newUsername
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update displayed username
+                usernameDisplay.querySelector('span').textContent = newUsername;
+                usernameEdit.classList.add('d-none');
+                usernameDisplay.classList.remove('d-none');
+                usernameError.style.display = 'none';
+            } else {
+                usernameError.textContent = data.error || 'Failed to update username';
+                usernameError.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            usernameError.textContent = 'An error occurred while updating username';
+            usernameError.style.display = 'block';
+        });
+    });
+
+    // Handle Enter key in username input
+    usernameInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            saveUsernameBtn.click();
+        }
+    });
+});
+</script>
 {% endblock %}

@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load static %}
+{% load recipe_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/recipe_cards.css' %}">
+<style>
+    @media (max-width: 768px) {
+        .container {
+            max-width: 100%;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+    }
+    @media (max-width: 992px) {
+        .container {
+            max-width: 100%;
+            padding-left: 10px;
+            padding-right: 10px;
+        }
+    }
+    .category-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .category-btn {
+        padding: 8px 16px;
+        border-radius: 20px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    .category-btn:hover {
+        background-color: #e9ecef;
+    }
+    .category-btn.active {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+    .recipe-card.hidden {
+        display: none;
+    }
+    .recipe-cards-container {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 20px;
+        margin: 20px 0;
+        overflow-x: auto;
+        padding: 10px 0;
+    }
+    .recipe-card {
+        flex: 0 0 400px;
+        margin-bottom: 20px;
+    }
+    @media (max-width: 992px) {
+        .recipe-card {
+            flex: 0 0 350px;
+        }
+        .serves-text {
+            display: none;
+        }
+    }
+    @media (max-width: 576px) {
+        .recipe-card {
+            flex: 0 0 300px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block title %}My Recipes - Savory{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>My Recipe Collection</h1>
+    <hr class="recipe-divider">
+
+    {% if recipes %}
+        <div class="category-filters">
+            <button class="category-btn active" data-category="all">All Categories</button>
+            {% for category in categories %}
+                <button class="category-btn" data-category="{{ category }}">{{ category }}</button>
+            {% endfor %}
+        </div>
+
+        <div class="recipe-cards-container">
+            {% for item in recipes %}
+                <div class="recipe-card" data-category="{{ item.category }}">
+                    <div class="card-header" style="background-image: url('{{ item.recipe.images.first.url }}')">
+                    </div>
+                    <div class="card-content">
+                        <h1>{{ item.recipe.name | safe}}</h1>
+                        <div class="recipe-meta">
+                            <div class="recipe-info">
+                                {% with total_time=item.recipe.prep_time|add:item.recipe.cook_time %}
+                                    <span><i class="fa fa-clock-o"></i> {{ total_time|format_time }}</span>
+                                {% endwith %}
+                                <span><i class="fa fa-users"></i> <span class='serves-text'>Serves</span> {{ item.recipe.servings }}</span>
+                            </div>
+                            <div class="stars">
+                                <li>
+                                    <span class="review-count">({{ item.recipe.review_count }})</span>
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= item.recipe.aggregated_rating %}
+                                            <a href="#"><i class="fa fa-star"></i></a>
+                                        {% else %}
+                                            <a href="#"><i class="fa fa-star-o"></i></a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </li>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <a href="{% url 'recipes:recipe_detail' recipe_id=item.recipe.recipe_id %}" class="btn">Let's Cook!</a>
+                            <a href="{% url 'recipes:remove_from_collection' recipe_id=item.recipe.recipe_id %}" class="btn btn-danger">
+                                <i class="fa fa-trash"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p class="lead">You haven't added any recipes to your collection yet.</p>
+            <a href="{% url 'recipes:home' %}" class="btn btn-primary">Browse Recipes</a>
+        </div>
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const categoryButtons = document.querySelectorAll('.category-btn');
+        const recipeCards = document.querySelectorAll('.recipe-card');
+        let selectedCategories = new Set(['all']);
+
+        function updateFilters() {
+            recipeCards.forEach(card => {
+                const cardCategory = card.dataset.category;
+                if (selectedCategories.has('all') || selectedCategories.has(cardCategory)) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        categoryButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const category = this.dataset.category;
+                
+                if (category === 'all') {
+                    if (selectedCategories.has('all')) {
+                        selectedCategories.clear();
+                        selectedCategories.add('all');
+                    } else {
+                        selectedCategories.clear();
+                        selectedCategories.add('all');
+                    }
+                } else {
+                    selectedCategories.delete('all');
+                    if (selectedCategories.has(category)) {
+                        selectedCategories.delete(category);
+                        if (selectedCategories.size === 0) {
+                            selectedCategories.add('all');
+                        }
+                    } else {
+                        selectedCategories.add(category);
+                    }
+                }
+
+                // Update button states
+                categoryButtons.forEach(btn => {
+                    if (btn.dataset.category === 'all') {
+                        btn.classList.toggle('active', selectedCategories.has('all'));
+                    } else {
+                        btn.classList.toggle('active', selectedCategories.has(btn.dataset.category));
+                    }
+                });
+
+                updateFilters();
+            });
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %} 
