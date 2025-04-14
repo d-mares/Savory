@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="container mt-4">
+    {% csrf_token %}
     <div class="row">
         <div class="col-md-8">
             <h2>My Pantry</h2>
@@ -15,14 +16,32 @@
                                         <div class="card-body">
                                             <h5 class="card-title">{{ item.ingredient.name }}</h5>
                                             <p class="card-text">Added: {{ item.added_at|date:"M d, Y" }}</p>
-                                            <button class="btn btn-info btn-sm mb-2" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#relatedIngredientsModal"
-                                                    data-ingredient-id="{{ item.ingredient.id }}"
-                                                    data-ingredient-name="{{ item.ingredient.name }}">
-                                                Select Related Ingredients
-                                            </button>
-                                            <a href="{% url 'pantry:remove_from_pantry' item.ingredient.id %}" class="btn btn-danger btn-sm">Remove</a>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <button class="btn btn-info btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#relatedIngredientsModal"
+                                                        data-ingredient-id="{{ item.ingredient.id }}"
+                                                        data-ingredient-name="{{ item.ingredient.name }}">
+                                                    Select Related Ingredients
+                                                </button>
+                                                <div>
+                                                    <button class="btn btn-link text-primary p-0 me-2" 
+                                                            onclick="addToShoppingList({{ item.ingredient.id }})"
+                                                            title="Add to shopping list"
+                                                            data-bs-toggle="tooltip"
+                                                            data-bs-placement="top">
+                                                        <i class="fa fa-shopping-cart"></i>
+                                                    </button>
+                                                    <a href="{% url 'pantry:remove_from_pantry' item.ingredient.id %}" 
+                                                       class="btn btn-link text-danger p-0"
+                                                       onclick="handleLoginRequiredAction(event, this.href)"
+                                                       title="Remove from pantry"
+                                                       data-bs-toggle="tooltip"
+                                                       data-bs-placement="top">
+                                                        <i class="fa fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -63,8 +82,14 @@
                 <div class="mb-3">
                     <input type="text" id="relatedIngredientSearch" class="form-control" placeholder="Search ingredients...">
                 </div>
-                <div id="relatedIngredientResults" class="list-group">
+                <div id="relatedIngredientResults" class="list-group mb-3">
                     <!-- Results will be populated here via JavaScript -->
+                </div>
+                <div class="selected-ingredients">
+                    <h6>Selected Related Ingredients:</h6>
+                    <div id="selectedRelatedIngredients" class="d-flex flex-wrap gap-2">
+                        <!-- Selected ingredients will be shown here -->
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -95,6 +120,9 @@ document.getElementById('ingredientSearch').addEventListener('input', function(e
                 link.href = `/pantry/add/${ingredient.id}/`;
                 link.className = 'list-group-item list-group-item-action';
                 link.textContent = ingredient.name;
+                link.onclick = function(e) {
+                    handleLoginRequiredAction(e, this.href);
+                };
                 resultsDiv.appendChild(link);
             });
         });
@@ -103,12 +131,16 @@ document.getElementById('ingredientSearch').addEventListener('input', function(e
 // Handle related ingredient search
 document.getElementById('relatedIngredientSearch').addEventListener('input', function(e) {
     const searchText = e.target.value;
+    const modal = document.getElementById('relatedIngredientsModal');
+    const ingredientId = modal.getAttribute('data-ingredient-id');
+    const relatedIngredients = JSON.parse(modal.getAttribute('data-related-ingredients') || '[]');
+    
     if (searchText.length < 2) {
         document.getElementById('relatedIngredientResults').innerHTML = '';
         return;
     }
 
-    fetch(`/pantry/search-ingredients/?q=${encodeURIComponent(searchText)}`)
+    fetch(`/pantry/search-ingredients/?q=${encodeURIComponent(searchText)}&exclude_id=${ingredientId}`)
         .then(response => response.json())
         .then(data => {
             const resultsDiv = document.getElementById('relatedIngredientResults');
@@ -121,6 +153,10 @@ document.getElementById('relatedIngredientSearch').addEventListener('input', fun
                 checkbox.type = 'checkbox';
                 checkbox.className = 'form-check-input me-2';
                 checkbox.value = ingredient.id;
+                checkbox.checked = relatedIngredients.includes(parseInt(ingredient.id));
+                checkbox.addEventListener('change', function() {
+                    updateSelectedIngredients();
+                });
                 
                 const label = document.createElement('label');
                 label.className = 'form-check-label';
@@ -130,8 +166,24 @@ document.getElementById('relatedIngredientSearch').addEventListener('input', fun
                 div.appendChild(label);
                 resultsDiv.appendChild(div);
             });
+            
+            updateSelectedIngredients();
         });
 });
+
+function updateSelectedIngredients() {
+    const selectedDiv = document.getElementById('selectedRelatedIngredients');
+    const checkboxes = document.querySelectorAll('#relatedIngredientResults input[type="checkbox"]:checked');
+    
+    selectedDiv.innerHTML = '';
+    checkboxes.forEach(checkbox => {
+        const label = checkbox.nextElementSibling;
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-primary';
+        badge.textContent = label.textContent;
+        selectedDiv.appendChild(badge);
+    });
+}
 
 // Handle modal show event
 document.getElementById('relatedIngredientsModal').addEventListener('show.bs.modal', function(event) {
@@ -145,16 +197,69 @@ document.getElementById('relatedIngredientsModal').addEventListener('show.bs.mod
     // Update modal title
     this.querySelector('.modal-title').textContent = `Select Related Ingredients for ${ingredientName}`;
     
-    // Load current related ingredients
+    // Prefill the search input with the ingredient name
+    const searchInput = document.getElementById('relatedIngredientSearch');
+    searchInput.value = ingredientName;
+    
+    // Clear previous results
+    document.getElementById('relatedIngredientResults').innerHTML = '';
+    document.getElementById('selectedRelatedIngredients').innerHTML = '';
+    
+    // Load current related ingredients first
     fetch(`/pantry/get-related-ingredients/${ingredientId}/`)
         .then(response => response.json())
         .then(data => {
-            const checkboxes = document.querySelectorAll('#relatedIngredientResults input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = data.related_ingredients.includes(parseInt(checkbox.value));
-            });
+            // Store the related ingredients for later use
+            this.setAttribute('data-related-ingredients', JSON.stringify(data.related_ingredients));
+            
+            // Trigger the search to show results with pre-checked items
+            searchInput.dispatchEvent(new Event('input'));
         });
 });
+
+function addToShoppingList(ingredientId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+
+    fetch(`/shopping/add/${ingredientId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const button = document.querySelector(`button[onclick="addToShoppingList(${ingredientId})"]`);
+            const originalIcon = button.innerHTML;
+            button.innerHTML = '<i class="fa fa-check"></i>';
+            button.classList.remove('text-primary');
+            button.classList.add('text-success');
+            
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.innerHTML = originalIcon;
+                button.classList.remove('text-success');
+                button.classList.add('text-primary');
+            }, 2000);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error adding the ingredient to your shopping list. Please try again.');
+    });
+}
 
 // Handle save button click
 document.getElementById('saveRelatedIngredients').addEventListener('click', function() {
@@ -164,22 +269,69 @@ document.getElementById('saveRelatedIngredients').addEventListener('click', func
         document.querySelectorAll('#relatedIngredientResults input[type="checkbox"]:checked')
     ).map(checkbox => parseInt(checkbox.value));
     
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return;
+    }
+    
+    // Disable the save button and show loading state
+    const saveButton = this;
+    if (saveButton.disabled) return; // Prevent double submission
+    const originalText = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
+    
+    // Remove any existing error messages
+    const existingError = modal.querySelector('.modal-footer .text-danger');
+    if (existingError) {
+        existingError.remove();
+    }
+    
     fetch(`/pantry/save-related-ingredients/${ingredientId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-CSRFToken': csrfToken,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({ related_ingredients: selectedIngredients })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || 'Failed to save related ingredients');
+            });
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.status === 'success') {
             // Close the modal
             bootstrap.Modal.getInstance(modal).hide();
-            // Show success message
-            alert('Related ingredients saved successfully!');
+        } else {
+            throw new Error(data.message || 'Failed to save related ingredients');
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Show error in the modal footer
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'text-danger mt-2';
+        errorDiv.textContent = error.message || 'Failed to save changes. Please try again.';
+        modal.querySelector('.modal-footer').appendChild(errorDiv);
+    })
+    .finally(() => {
+        // Reset button state
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalText;
+    });
+});
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 </script>

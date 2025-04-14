@@ -32,9 +32,26 @@ def recipe_detail(request, recipe_id):
     """Recipe detail view."""
     recipe = get_object_or_404(Recipe, recipe_id=recipe_id)
     images = recipe.images.all().order_by('order')
+    
+    # Get user's pantry items if authenticated
+    user_pantry = []
+    if request.user.is_authenticated:
+        from apps.pantry.models import UserPantry
+        pantry_items = UserPantry.objects.filter(user=request.user).select_related('ingredient')
+        user_pantry = [item.ingredient for item in pantry_items]
+        
+        # Get related ingredients for each pantry item
+        related_ingredients = []
+        for item in pantry_items:
+            related_ingredients.extend(item.related_ingredients.all())
+        
+        # Add related ingredients to user_pantry
+        user_pantry.extend(related_ingredients)
+    
     return render(request, 'recipes/recipe_detail.html', {
         'recipe': recipe,
         'images': images,
+        'user_pantry': user_pantry,
     })
 
 @staff_member_required
@@ -72,28 +89,74 @@ def recipe_images(request, recipe_id):
         logger.error(f"Error fetching images: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
+@login_required
 def personal_recipes(request):
     """View for user's personal recipe collection."""
     if not request.user.is_authenticated:
         return redirect('account_login')
-        
+    
+    # Get user's pantry items
+    from apps.pantry.models import UserPantry
+    pantry_items = UserPantry.objects.filter(user=request.user).select_related('ingredient')
+    user_pantry = [item.ingredient for item in pantry_items]
+    
+    # Get related ingredients for each pantry item
+    related_ingredients = []
+    for item in pantry_items:
+        related_ingredients.extend(item.related_ingredients.all())
+    
+    # Add related ingredients to user_pantry
+    user_pantry.extend(related_ingredients)
+    
     # Get all recipes in user's collection
     user_recipes = UserRecipeCollection.objects.filter(user=request.user).select_related('recipe')
     
     # Get unique categories
     categories = set()
     recipes = []
+    
     for collection in user_recipes:
+        recipe = collection.recipe
         category = collection.category or 'Uncategorized'
         categories.add(category)
+        
+        # Calculate missing ingredients
+        missing_ingredients = []
+        for recipe_ingredient in recipe.recipe_ingredients.all():
+            if recipe_ingredient.ingredient and recipe_ingredient.ingredient not in user_pantry:
+                missing_ingredients.append(recipe_ingredient.ingredient)
+        
         recipes.append({
-            'recipe': collection.recipe,
-            'category': category
+            'recipe': recipe,
+            'category': category,
+            'missing_ingredients': missing_ingredients,
+            'missing_ingredients_count': len(missing_ingredients),
+            'total_time': recipe.total_time or (recipe.prep_time + recipe.cook_time if recipe.prep_time and recipe.cook_time else None),
+            'rating': recipe.aggregated_rating
         })
+    
+    # Get sort and direction parameters
+    sort_by = request.GET.get('sort', '')
+    direction = request.GET.get('direction', 'asc')
+    
+    if sort_by == 'time':
+        recipes.sort(key=lambda x: x['total_time'] or float('inf'), reverse=(direction == 'desc'))
+    elif sort_by == 'rating':
+        recipes.sort(key=lambda x: x['rating'] or 0, reverse=(direction == 'desc'))
+    elif sort_by == 'missing':
+        recipes.sort(key=lambda x: x['missing_ingredients_count'], reverse=(direction == 'desc'))
+    
+    # Get filter parameter
+    filter_by = request.GET.get('filter', '')
+    if filter_by == 'available':
+        recipes = [r for r in recipes if r['missing_ingredients_count'] == 0]
     
     return render(request, 'recipes/personal_recipes.html', {
         'recipes': recipes,
         'categories': sorted(list(categories)),
+        'current_sort': sort_by,
+        'current_filter': filter_by,
+        'current_direction': direction
     })
 
 @login_required

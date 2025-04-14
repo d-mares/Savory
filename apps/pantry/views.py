@@ -7,6 +7,9 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Ingredient, UserPantry
 from .forms import IngredientForm
 import urllib.parse
+from django.db import transaction
+from django.db.utils import OperationalError
+import time
 
 # Create your views here.
 
@@ -20,13 +23,18 @@ def pantry_list(request):
 @login_required
 def search_ingredients(request):
     query = request.GET.get('q', '')
+    exclude_id = request.GET.get('exclude_id', None)
     if len(query) < 2:
         return JsonResponse({'ingredients': []})
     
     # Decode the query to handle special characters
     query = urllib.parse.unquote(query)
     
-    ingredients = Ingredient.objects.filter(name__icontains=query)[:10]
+    ingredients = Ingredient.objects.filter(name__icontains=query)
+    if exclude_id:
+        ingredients = ingredients.exclude(id=exclude_id)
+    ingredients = ingredients[:10]
+    
     return JsonResponse({
         'ingredients': [{'id': i.id, 'name': i.name} for i in ingredients]
     })
@@ -48,23 +56,38 @@ def get_related_ingredients(request, ingredient_id):
 
 @login_required
 @require_POST
-@csrf_exempt
 def save_related_ingredients(request, ingredient_id):
-    ingredient = get_object_or_404(Ingredient, id=ingredient_id)
-    pantry_item = get_object_or_404(UserPantry, user=request.user, ingredient=ingredient)
-    
-    import json
-    data = json.loads(request.body)
-    related_ingredient_ids = data.get('related_ingredients', [])
-    
-    # Remove the current ingredient from the list if it's there
-    if ingredient_id in related_ingredient_ids:
-        related_ingredient_ids.remove(ingredient_id)
-    
-    # Update related ingredients
-    pantry_item.related_ingredients.set(related_ingredient_ids)
-    
-    return JsonResponse({'status': 'success'})
+    try:
+        import json
+        data = json.loads(request.body)
+        related_ingredient_ids = data.get('related_ingredients', [])
+        
+        # Get the pantry item
+        pantry_item = get_object_or_404(UserPantry, user=request.user, ingredient_id=ingredient_id)
+        
+        # Try to save with retries
+        max_retries = 3
+        retry_delay = 0.5  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                with transaction.atomic():
+                    # Convert string IDs to integers
+                    related_ingredient_ids = [int(id) for id in related_ingredient_ids]
+                    pantry_item.related_ingredients.set(related_ingredient_ids)
+                return JsonResponse({'status': 'success'})
+            except OperationalError as e:
+                if 'database is locked' in str(e) and attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                raise
+            except ValueError as e:
+                return JsonResponse({'status': 'error', 'message': 'Invalid ingredient IDs'}, status=400)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 @login_required
 def add_to_pantry(request, ingredient_id):

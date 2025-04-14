@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     {% block extra_css %}{% endblock %}
     <style>
+        :root {
+            --primary-green: #00591e;
+            --primary-green-hover: #004716;
+            --primary-green-light: #e6f0e9;
+        }
+
         /* Container width adjustments */
         @media (min-width: 1400px) {
             .container {
@@ -82,6 +88,11 @@
         .nav-menu .nav-link {
             padding: 0.75rem 1rem;
             border-bottom: 1px solid #f1f1f1;
+            color: var(--primary-green);
+        }
+        
+        .nav-menu .nav-link:hover {
+            background-color: var(--primary-green-light);
         }
         
         .nav-menu .nav-link:last-child {
@@ -150,7 +161,7 @@
         }
         
         .search-icon:hover {
-            background-color: #00591e;
+            background-color: var(--primary-green);
             color: white;
         }
         
@@ -159,9 +170,9 @@
             height: 16px;
         }
 
-        /* Add these styles to your existing styles */
+        /* Nav icon styles */
         .nav-icon {
-            color: #333;
+            color: var(--primary-green);
             font-size: 1.25rem;
             padding: 0.5rem;
             transition: all 0.3s ease;
@@ -169,12 +180,49 @@
         }
         
         .nav-icon:hover {
-            color: #00591e;
+            color: var(--primary-green-hover);
             transform: scale(1.1);
         }
         
         .nav-icon i {
             display: block;
+        }
+
+        /* Override Bootstrap primary color */
+        .btn-primary {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-green-hover);
+            border-color: var(--primary-green-hover);
+        }
+
+        .btn-outline-primary {
+            color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+
+        .text-primary {
+            color: var(--primary-green) !important;
+        }
+
+        .badge.bg-primary {
+            background-color: var(--primary-green) !important;
+        }
+
+        .navbar-toggler {
+            border-color: var(--primary-green);
+        }
+
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 89, 30, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
         }
     </style>
 </head>
@@ -319,6 +367,17 @@
                 navbar.classList.remove('scrolled');
             }
         });
+
+        // Function to handle login-required actions
+        function handleLoginRequiredAction(event, actionUrl) {
+            {% if user.is_authenticated %}
+                window.location.href = actionUrl;
+            {% else %}
+                event.preventDefault();
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+            {% endif %}
+        }
     </script>
     {% block extra_js %}{% endblock %}
 </body>

@@ -37,6 +37,7 @@
 
 {% block content %}
 <div class="container mt-5">
+    {% csrf_token %}
     <div class="row">
         <div class="col-md-8">
             {% if images %}
@@ -76,7 +77,41 @@
                     <h3>Ingredients</h3>
                     <ul class="list-group">
                         {% for ingredient in recipe.recipe_ingredients.all %}
-                            <li class="list-group-item">{{ ingredient.raw_string | safe }}</li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    {{ ingredient.raw_string | safe }}
+                                    {% if user.is_authenticated %}
+                                        {% if ingredient.ingredient in user_pantry %}
+                                            <i class="fa fa-check-circle text-success ms-2" 
+                                               title="{{ ingredient.ingredient.name }} is in your pantry"
+                                               data-bs-toggle="tooltip"
+                                               data-bs-placement="top"></i>
+                                        {% else %}
+                                            <i class="fa fa-times-circle text-danger ms-2" 
+                                               title="{{ ingredient.ingredient.name }} is not in your pantry"
+                                               data-bs-toggle="tooltip"
+                                               data-bs-placement="top"></i>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                                {% if user.is_authenticated %}
+                                    <button class="btn btn-link text-primary p-0" 
+                                            onclick="addToShoppingList({{ ingredient.ingredient.id }})"
+                                            title="Add {{ ingredient.ingredient.name }} to shopping list"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="left">
+                                        <i class="fa fa-shopping-cart"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-link text-primary p-0" 
+                                            onclick="handleLoginRequiredAction(event, '/shopping/add/{{ ingredient.ingredient.id }}/')"
+                                            title="Add {{ ingredient.ingredient.name }} to shopping list"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="left">
+                                        <i class="fa fa-shopping-cart"></i>
+                                    </button>
+                                {% endif %}
+                            </li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -113,19 +148,21 @@
                         <li class="list-group-item">Servings: {{ recipe.servings }}</li>
                         <li class="list-group-item">Serving Size: {{ recipe.serving_size }}</li>
                     </ul>
-                    {% if user.is_authenticated %}
-                        <div class="mt-3">
-                            {% if recipe in user.recipe_collection.all %}
-                                <a href="{% url 'recipes:remove_from_collection' recipe_id=recipe.recipe_id %}" class="btn btn-danger w-100">
-                                    <i class="fa fa-heart"></i> Remove from Collection
-                                </a>
-                            {% else %}
-                                <a href="{% url 'recipes:add_to_collection' recipe_id=recipe.recipe_id %}" class="btn btn-primary w-100">
-                                    <i class="fa fa-heart-o"></i> Add to Collection
-                                </a>
-                            {% endif %}
-                        </div>
-                    {% endif %}
+                    <div class="mt-3">
+                        {% if recipe in user.recipe_collection.all %}
+                            <a href="{% url 'recipes:remove_from_collection' recipe_id=recipe.recipe_id %}" 
+                               class="btn btn-danger w-100"
+                               onclick="handleLoginRequiredAction(event, this.href)">
+                                <i class="fa fa-heart"></i> Remove from Collection
+                            </a>
+                        {% else %}
+                            <a href="{% url 'recipes:add_to_collection' recipe_id=recipe.recipe_id %}" 
+                               class="btn btn-primary w-100"
+                               onclick="handleLoginRequiredAction(event, this.href)">
+                                <i class="fa fa-heart-o"></i> Add to Collection
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             
@@ -153,6 +190,58 @@
         });
         thumbnail.classList.add('active');
     }
+
+    function addToShoppingList(ingredientId) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            return;
+        }
+
+        fetch(`/shopping/add/${ingredientId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                const button = document.querySelector(`button[onclick="addToShoppingList(${ingredientId})"]`);
+                const originalIcon = button.innerHTML;
+                button.innerHTML = '<i class="fa fa-check"></i>';
+                button.classList.remove('text-primary');
+                button.classList.add('text-success');
+                
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalIcon;
+                    button.classList.remove('text-success');
+                    button.classList.add('text-primary');
+                }, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error adding the ingredient to your shopping list. Please try again.');
+        });
+    }
+
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
 </script>
 {% endblock %}
 {% endblock %} 

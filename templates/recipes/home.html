@@ -49,7 +49,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Shopping Lists</h5>
                         <p class="card-text">Create and manage your shopping lists.</p>
-                        <a href="#" class="btn btn-primary">Go to Shopping Lists</a>
+                        <a href="{% url 'shopping:shopping_list' %}" class="btn btn-primary">Go to Shopping Lists</a>
                     </div>
                 </div>
             </div>
@@ -151,40 +151,46 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const recipeId = this.dataset.recipeId;
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const actionUrl = `/recipes/recipe/${recipeId}/toggle-collection/`;
             
-            fetch(`/recipes/recipe/${recipeId}/toggle-collection/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json'
-                },
-                credentials: 'same-origin'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Update all heart icons for this recipe
-                    document.querySelectorAll(`.heart-link[data-recipe-id="${recipeId}"]`).forEach(link => {
-                        if (data.is_in_collection) {
-                            link.classList.add('filled');
-                            link.innerHTML = '<i class="fa fa-heart"></i>';
-                        } else {
-                            link.classList.remove('filled');
-                            link.innerHTML = '<i class="fa fa-heart-o"></i>';
-                        }
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('There was an error updating your collection. Please try again.');
-            });
+            {% if user.is_authenticated %}
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                fetch(actionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Update all heart icons for this recipe
+                        document.querySelectorAll(`.heart-link[data-recipe-id="${recipeId}"]`).forEach(link => {
+                            if (data.is_in_collection) {
+                                link.classList.add('filled');
+                                link.innerHTML = '<i class="fa fa-heart"></i>';
+                            } else {
+                                link.classList.remove('filled');
+                                link.innerHTML = '<i class="fa fa-heart-o"></i>';
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('There was an error updating your collection. Please try again.');
+                });
+            {% else %}
+                handleLoginRequiredAction(e, actionUrl);
+            {% endif %}
         });
     });
 });
