@@ -1,12 +1,14 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Recipe, RecipeImage, CarouselItem, UserRecipeCollection
+from .models import Recipe, RecipeImage, CarouselItem, UserRecipeCollection, Tag, Ingredient
 import logging
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.utils import IntegrityError
+from django.db import models
+from django.db.models import Q, Count
 
 logger = logging.getLogger(__name__)
 
@@ -215,3 +217,119 @@ def toggle_recipe_collection(request, recipe_id):
         'success': True,
         'is_in_collection': is_in_collection
     })
+
+def search_recipes(request):
+    query = request.GET.get('q', '')
+    category = request.GET.get('category', '')
+    page = int(request.GET.get('page', 1))
+    page_size = int(request.GET.get('page_size', 35))
+    sort = request.GET.get('sort', '')
+    direction = request.GET.get('direction', 'desc')
+    filter_type = request.GET.get('filter', '')
+    
+    # Base queryset
+    recipes = Recipe.objects.all()
+    
+    # Get user's recipe collection if authenticated
+    user_recipe_collection = None
+    if request.user.is_authenticated:
+        user_recipe_collection = Recipe.objects.filter(
+            collected_by__user=request.user
+        )
+    
+    # Apply search query
+    if query:
+        # Search in recipe name, description, and category
+        recipes = recipes.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(recipe_category__icontains=query) |
+            # Search in ingredients
+            Q(recipe_ingredients__ingredient__name__icontains=query) |
+            # Search in tags
+            Q(recipe_tags__tag__name__icontains=query)
+        ).distinct()
+    
+    # Apply category filter
+    if category:
+        recipes = recipes.filter(recipe_category=category)
+    
+    # Apply additional filters
+    if filter_type == 'available' and request.user.is_authenticated:
+        # Filter recipes where all ingredients are in user's pantry
+        recipes = recipes.filter(
+            ~Q(recipe_ingredients__ingredient__userpantry__user=request.user)
+        ).distinct()
+    
+    # Get matching ingredients for the sidebar
+    matching_ingredients = Ingredient.objects.filter(
+        name__icontains=query
+    ).distinct()[:10]  # Limit to 10 matching ingredients
+    
+    # Get unique categories that have matching recipes and sort them alphabetically
+    categories = Recipe.objects.filter(
+        id__in=recipes.values('id')
+    ).values_list('recipe_category', flat=True).distinct().order_by('recipe_category')
+    
+    # Calculate total recipes and pages
+    total_recipes = recipes.count()
+    total_pages = (total_recipes + page_size - 1) // page_size
+    
+    # Apply sorting
+    if sort == 'time':
+        recipes = recipes.order_by(f"{'-' if direction == 'desc' else ''}total_time")
+    elif sort == 'rating':
+        recipes = recipes.order_by(f"{'-' if direction == 'desc' else ''}aggregated_rating")
+    elif sort == 'date':
+        recipes = recipes.order_by(f"{'-' if direction == 'desc' else ''}created_at")
+    elif sort == 'missing' and request.user.is_authenticated:
+        # Sort by number of missing ingredients
+        recipes = recipes.annotate(
+            missing_count=Count(
+                'recipe_ingredients',
+                filter=~Q(recipe_ingredients__ingredient__userpantry__user=request.user)
+            )
+        ).order_by(f"{'-' if direction == 'desc' else ''}missing_count")
+    
+    # Apply pagination
+    start = (page - 1) * page_size
+    end = start + page_size
+    recipes = recipes[start:end]
+    
+    # Prepare recipe data with additional information
+    recipe_data = []
+    for recipe in recipes:
+        data = {
+            'recipe': recipe,
+            'total_time': recipe.total_time,
+            'rating': recipe.aggregated_rating,
+        }
+        
+        if request.user.is_authenticated:
+            # Calculate missing ingredients count
+            missing_count = recipe.recipe_ingredients.filter(
+                ~Q(ingredient__userpantry__user=request.user)
+            ).count()
+            data['missing_count'] = missing_count
+            # Add availability indicator
+            data['has_all_ingredients'] = missing_count == 0
+        
+        recipe_data.append(data)
+    
+    context = {
+        'query': query,
+        'recipes': recipe_data,
+        'total_recipes': total_recipes,
+        'total_pages': total_pages,
+        'page': page,
+        'page_size': page_size,
+        'categories': categories,
+        'current_category': category,
+        'current_sort': sort,
+        'current_direction': direction,
+        'current_filter': filter_type,
+        'matching_ingredients': matching_ingredients,
+        'user_recipe_collection': user_recipe_collection,  # Add user's recipe collection to context
+    }
+    
+    return render(request, 'recipes/search_results.html', context)

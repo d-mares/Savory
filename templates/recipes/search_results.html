@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load recipe_extras %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/recipe_cards.css' %}">
+<style>
+    .heart-link {
+        color: white;
+        font-size: 1.5rem;
+        text-shadow: 0 0 5px rgba(0,0,0,0.5);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .heart-link:hover {
+        transform: scale(1.1);
+    }
+    .heart-link.filled {
+        color: #ff4444;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .pagination .btn {
+        min-width: 100px;
+    }
+    .page-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .page-selector select {
+        width: auto;
+    }
+    .search-header {
+        margin-bottom: 2rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    .recipe-cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
+    }
+    .recipe-card {
+        height: 90%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .card-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .card-content .btn {
+        margin-top: auto;
+    }
+    .availability-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        z-index: 1;
+    }
+    .missing-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #ffc107;
+        color: black;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        z-index: 1;
+    }
+    .recipe-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    .recipe-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .recipe-info span {
+        display: block;
+    }
+    .stars {
+        margin-left: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container mt-5">
+    <!-- Search Header -->
+    <div class="search-header">
+        <h2>Recipes Including: "{{ query }}"</h2>
+        <p class="text-muted">{{ total_recipes }} recipes found</p>
+    </div>
+
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Filters</h5>
+                    <form method="get" class="mb-3">
+                        <input type="hidden" name="q" value="{{ query }}">
+                        <div class="mb-3">
+                            <label class="form-label">Sort By</label>
+                            <select name="sort" class="form-select">
+                                <option value="">Default</option>
+                                <option value="time" {% if current_sort == 'time' %}selected{% endif %}>Time</option>
+                                <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Rating</option>
+                                <option value="date" {% if current_sort == 'date' %}selected{% endif %}>Date</option>
+                                {% if user.is_authenticated %}
+                                <option value="missing" {% if current_sort == 'missing' %}selected{% endif %}>Missing Ingredients</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Direction</label>
+                            <select name="direction" class="form-select">
+                                <option value="desc" {% if current_direction == 'desc' %}selected{% endif %}>Descending</option>
+                                <option value="asc" {% if current_direction == 'asc' %}selected{% endif %}>Ascending</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Filter</label>
+                            <select name="filter" class="form-select">
+                                <option value="">All Recipes</option>
+                                {% if user.is_authenticated %}
+                                <option value="available" {% if current_filter == 'available' %}selected{% endif %}>Available Ingredients</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select name="category" class="form-select">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}" {% if current_category == category %}selected{% endif %}>{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                    </form>
+
+                    <!-- Ingredients -->
+                    {% if matching_ingredients %}
+                    <h6>Ingredients containing "{{ query }}"</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for ingredient in matching_ingredients %}
+                        <a href="?q={{ ingredient.name }}" class="btn btn-sm btn-outline-secondary">{{ ingredient.name }}</a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Grid -->
+        <div class="col-md-9">
+            <div class="recipe-cards-container">
+                {% for data in recipes %}
+                <div class="recipe-card">
+                    <div class="card-header" style="background-image: url('{{ data.recipe.images.first.url }}')">
+                        {% if data.has_all_ingredients %}
+                        <div class="availability-indicator">All Ingredients Available</div>
+                        {% elif data.missing_count %}
+                        <div class="missing-indicator">{{ data.missing_count }} missing ingredients</div>
+                        {% endif %}
+                        <div class="icon">
+                            <a href="#" class="heart-link {% if data.recipe in user_recipe_collection %}filled{% endif %}" 
+                               data-recipe-id="{{ data.recipe.recipe_id }}">
+                                <i class="fa {% if data.recipe in user_recipe_collection %}fa-heart{% else %}fa-heart-o{% endif %}"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <h1>{{ data.recipe.name | safe }}</h1>
+                        <div class="recipe-meta">
+                            <div class="recipe-info">
+                                <span><i class="fa fa-clock-o"></i> {{ data.total_time|format_time }}</span>
+                                <span><i class="fa fa-users"></i> <span class='serves-text'>Serves</span> {{ data.recipe.servings }}</span>
+                            </div>
+                            <div class="stars">
+                                <li>
+                                    <span class="review-count">({{ data.recipe.review_count }})</span>
+                                    {% for i in "12345"|make_list %}
+                                        {% if forloop.counter <= data.rating %}
+                                            <a href="#"><i class="fa fa-star"></i></a>
+                                        {% else %}
+                                            <a href="#"><i class="fa fa-star-o"></i></a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </li>
+                            </div>
+                        </div>
+                        <a href="{% url 'recipes:recipe_detail' recipe_id=data.recipe.recipe_id %}" class="btn">Let's Cook!</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if total_pages > 1 %}
+            <div class="pagination">
+                {% if page > 1 %}
+                <a href="?page={{ page|add:'-1' }}&q={{ query|urlencode }}{% if current_category %}&category={{ current_category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" class="btn btn-outline-primary">Previous</a>
+                {% endif %}
+                
+                <div class="page-selector">
+                    <span>Page</span>
+                    <select class="form-select" onchange="window.location.href=this.value">
+                        {% for i in total_pages|get_range %}
+                        <option value="?page={{ i }}&q={{ query|urlencode }}{% if current_category %}&category={{ current_category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" {% if i == page %}selected{% endif %}>{{ i }}</option>
+                        {% endfor %}
+                    </select>
+                    <span>of {{ total_pages }}</span>
+                </div>
+                
+                {% if page < total_pages %}
+                <a href="?page={{ page|add:'1' }}&q={{ query|urlencode }}{% if current_category %}&category={{ current_category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" class="btn btn-outline-primary">Next</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Handle heart icon clicks
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.heart-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const recipeId = this.dataset.recipeId;
+            const actionUrl = `/recipes/recipe/${recipeId}/toggle-collection/`;
+            
+            {% if user.is_authenticated %}
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                fetch(actionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Update all heart icons for this recipe
+                        document.querySelectorAll(`.heart-link[data-recipe-id="${recipeId}"]`).forEach(link => {
+                            if (data.is_in_collection) {
+                                link.classList.add('filled');
+                                link.innerHTML = '<i class="fa fa-heart"></i>';
+                            } else {
+                                link.classList.remove('filled');
+                                link.innerHTML = '<i class="fa fa-heart-o"></i>';
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('There was an error updating your collection. Please try again.');
+                });
+            {% else %}
+                handleLoginRequiredAction(e, actionUrl);
+            {% endif %}
+        });
+    });
+});
+</script>
+{% endblock %} 
