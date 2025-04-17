@@ -16,5 +16,3 @@ class UserPantry(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s {self.ingredient.name}"
-
-# Create your models here.
