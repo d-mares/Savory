@@ -93,9 +93,16 @@ WSGI_APPLICATION = 'savory.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+        'ENGINE': 'mssql',
+        'NAME': 'Savory-DB',
+        'USER': 'danmares@savory-foods-db',
+        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'HOST': 'savory-foods-db.database.windows.net',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+    },
+}
+    
 }
 
 
