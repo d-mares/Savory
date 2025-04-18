@@ -100,9 +100,8 @@ DATABASES = {
         'HOST': 'savory-foods-db.database.windows.net',
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
-    },
-}
-    
+        },
+    }
 }
 
 
