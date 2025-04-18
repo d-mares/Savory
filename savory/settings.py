@@ -185,5 +185,5 @@ ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_USER_MODEL_EMAIL_FIELD = 'email'
 
-
+CSRF_TRUSTED_ORIGINS = ['https://savory-gwexdxfwgngefcdh.eastus-01.azurewebsites.net']
 
