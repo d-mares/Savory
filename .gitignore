@@ -26,6 +26,3 @@ media/
 # OS
 .DS_Store
 Thumbs.db
-
-# Static files collected
-staticfiles/
