@@ -4,7 +4,7 @@
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header" style="background-color: #00591E; color: white;">
                 <h5 class="modal-title" id="loginModalLabel">Log In</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -14,11 +14,11 @@
                     <form class="login" method="POST" action="{% url 'account_login' %}" id="loginFormElement">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="id_login" class="form-label">Email</label>
+                            <label for="id_login" class="form-label">Email:</label>
                             <input type="email" name="login" class="form-control" id="id_login" required>
                         </div>
                         <div class="mb-3">
-                            <label for="id_password" class="form-label">Password</label>
+                            <label for="id_password" class="form-label">Password:</label>
                             <input type="password" name="password" class="form-control" id="id_password" required>
                         </div>
                         <div class="mb-3 form-check">
@@ -47,15 +47,21 @@
                     <form class="signup" method="POST" action="{% url 'account_signup' %}">
                         {% csrf_token %}
                         <div class="mb-3">
-                            <label for="id_email" class="form-label">Email</label>
+                            <label for="id_username" class="form-label">Username:</label>
+                            <input type="text" name="username" class="form-control" id="id_username" required
+                                   pattern="[a-zA-Z0-9_]+" title="Username can only contain letters, numbers, and underscores">
+                            <small class="form-text text-muted">Username can only contain letters, numbers, and underscores</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_email" class="form-label">Email:</label>
                             <input type="email" name="email" class="form-control" id="id_email" required>
                         </div>
                         <div class="mb-3">
-                            <label for="id_password1" class="form-label">Password</label>
+                            <label for="id_password1" class="form-label">Password:</label>
                             <input type="password" name="password1" class="form-control" id="id_password1" required>
                         </div>
                         <div class="mb-3">
-                            <label for="id_password2" class="form-label">Password (again)</label>
+                            <label for="id_password2" class="form-label">Password Confirmation:</label>
                             <input type="password" name="password2" class="form-control" id="id_password2" required>
                         </div>
                         {% if redirect_field_value %}
@@ -154,6 +160,27 @@
     background-color: #f8d7da;
     border-color: #f5c6cb;
     color: #721c24;
+}
+
+.modal-header {
+    background-color: #fff;
+    color: black;
+}
+
+.modal-header .btn-close {
+    color: white;
+}
+
+.auth-form {
+    transition: all 0.3s ease;
+}
+
+.text-primary {
+    color: #00591E;
+}
+
+.form-label {
+    font-size: 1.2rem;
 }
 </style>
 

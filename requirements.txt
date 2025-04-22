@@ -29,3 +29,5 @@ tqdm==4.66.2
 tzdata==2025.1
 urllib3==2.3.0
 whitenoise==6.9.0
+azure-communication-email==1.0.0
+azure-identity==1.15.0
