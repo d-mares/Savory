@@ -1,0 +1,1 @@
+web: gunicorn savory.wsgi --log-file - 

@@ -4,7 +4,7 @@
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header" style="background-color: #00591E; color: white;">
                 <h5 class="modal-title" id="loginModalLabel">Sign In</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -44,7 +44,7 @@
 
                 <!-- Signup Form -->
                 <div id="signupForm" class="auth-form" style="display: none;">
-                    <form class="signup" method="POST" action="{% url 'account_signup' %}">
+                    <form class="signup" method="POST" action="{% url 'account_signup' %}" id="signupFormElement">
                         {% csrf_token %}
                         <div class="mb-3">
                             <label for="id_email" class="form-label">Email</label>
@@ -63,6 +63,11 @@
                         {% endif %}
                         <div class="d-grid gap-2">
                             <button class="btn btn-primary" type="submit">{% trans "Sign Up" %}</button>
+                        </div>
+                        <!-- Error Alert -->
+                        <div id="signupError" class="alert alert-danger mt-3 mb-0 d-none" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <span id="signupErrorText"></span>
                         </div>
                     </form>
                     <div class="text-center mt-3">
@@ -160,8 +165,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginFormElement');
+    const signupForm = document.getElementById('signupFormElement');
     const loginError = document.getElementById('loginError');
     const loginErrorText = document.getElementById('loginErrorText');
+    const signupError = document.getElementById('signupError');
+    const signupErrorText = document.getElementById('signupErrorText');
 
     // Handle form toggling
     document.querySelectorAll('.toggle-form').forEach(function(link) {
@@ -181,10 +189,69 @@ document.addEventListener('DOMContentLoaded', function() {
                 signupForm.style.display = 'none';
                 modalTitle.textContent = 'Sign In';
             }
-            // Hide error when switching forms
+            // Hide errors when switching forms
             loginError.classList.add('d-none');
+            signupError.classList.add('d-none');
         });
     });
+
+    // Handle signup form submission
+    if (signupForm) {
+        signupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.text();
+                }
+            })
+            .then(html => {
+                if (html) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Check for form errors
+                    const nonFieldErrors = doc.querySelector('.errorlist.nonfield') || 
+                                         doc.querySelector('.non-field-errors');
+                    
+                    // Check for field-specific errors
+                    const emailErrors = doc.querySelector('#id_email').closest('.form-group')?.querySelector('.errorlist');
+                    const password1Errors = doc.querySelector('#id_password1').closest('.form-group')?.querySelector('.errorlist');
+                    const password2Errors = doc.querySelector('#id_password2').closest('.form-group')?.querySelector('.errorlist');
+                    
+                    // Compile all errors
+                    let errorMessage = '';
+                    if (nonFieldErrors) errorMessage += nonFieldErrors.textContent.trim();
+                    if (emailErrors) errorMessage += ' ' + emailErrors.textContent.trim();
+                    if (password1Errors) errorMessage += ' ' + password1Errors.textContent.trim();
+                    if (password2Errors) errorMessage += ' ' + password2Errors.textContent.trim();
+                    
+                    if (errorMessage.trim()) {
+                        signupErrorText.textContent = errorMessage.trim();
+                        signupError.classList.remove('d-none');
+                        signupError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                signupErrorText.textContent = 'An error occurred. Please try again.';
+                signupError.classList.remove('d-none');
+                signupError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+    }
 
     // Handle login form submission
     if (loginForm) {
@@ -212,11 +279,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
                     
-                    // First check for form-level errors
+                    // Check for form errors
                     const nonFieldErrors = doc.querySelector('.errorlist.nonfield') || 
                                          doc.querySelector('.non-field-errors');
                     
-                    // Then check for errors on specific fields
+                    // Check for field-specific errors
                     const emailErrors = doc.querySelector('#id_login').closest('.form-group')?.querySelector('.errorlist');
                     const passwordErrors = doc.querySelector('#id_password').closest('.form-group')?.querySelector('.errorlist');
                     
@@ -226,24 +293,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (emailErrors) errorMessage += ' ' + emailErrors.textContent.trim();
                     if (passwordErrors) errorMessage += ' ' + passwordErrors.textContent.trim();
                     
-                    // If we found errors, display them
                     if (errorMessage.trim()) {
                         loginErrorText.textContent = errorMessage.trim();
                         loginError.classList.remove('d-none');
-                    } else if (html.includes('username and/or password') || html.includes('incorrect')) {
-                        // Fallback check for common error messages in the response text
-                        loginErrorText.textContent = 'The username and/or password you specified are not correct.';
-                        loginError.classList.remove('d-none');
-                    } else {
-                        // Generic error if we can't find a specific one
-                        loginErrorText.textContent = 'An error occurred. Please try again.';
-                        loginError.classList.remove('d-none');
+                        loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                    
-                    // Scroll to error message
-                    loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             })
+            .catch(error => {
+                console.error('Error:', error);
+                loginErrorText.textContent = 'An error occurred. Please try again.';
+                loginError.classList.remove('d-none');
+                loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
         });
     }
 
@@ -257,6 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => backdrop.classList.add('show'), 10);
             // Clear any previous errors when modal is opened
             loginError.classList.add('d-none');
+            signupError.classList.add('d-none');
         });
         
         modal.addEventListener('hide.bs.modal', function() {
