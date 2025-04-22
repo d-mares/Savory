@@ -88,15 +88,3 @@ savory/
     ├── shopping/       # Shopping list functionality
     └── nutrition/      # Nutrition tracking
 ```
-
-## Contributing
-
-Guidelines for contributing to the project will be added as the project develops.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Contact
-
-For questions or support, please open an issue in the repository.
