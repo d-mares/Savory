@@ -101,6 +101,10 @@
         grid-template-columns: 3fr 1fr;
         gap: 2rem;
         margin-top: 2rem;
+        max-width: 1400px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 0 2rem;
     }
 
     /* Ingredients & Instructions */
@@ -137,7 +141,7 @@
         position: absolute;
         left: 0;
         top: 0;
-        background-color: #0d6efd;
+        background-color: #00591e;
         color: white;
         width: 1.75rem;
         height: 1.75rem;
@@ -198,6 +202,7 @@
     .recipe-description-container {
         max-width: 1000px;
         margin: 0 auto 2rem;
+        top: 3rem;
     }
 
     /* Nutrition Facts Label Styles */
@@ -268,7 +273,7 @@
             <h1 class="recipe-title">{{ recipe.name | safe }}</h1>
             <div class="recipe-meta">
                 <div class="meta-item">
-                    <i class="fa fa-clock-o"></i>
+                    <i class="fa fa-clock"></i>
                     <span>{{ recipe.total_time|format_time }}</span>
                 </div>
                 <div class="meta-item">
@@ -279,6 +284,10 @@
                     <i class="fa fa-star"></i>
                     <span>{{ recipe.aggregated_rating }}/5 ({{ recipe.review_count }} reviews)</span>
                 </div>
+            </div>
+            <hr>
+            <div class="recipe-description-container">
+                <p class="recipe-description">{{ recipe.description }}</p>
             </div>
         </div>
 
@@ -299,38 +308,53 @@
         </div>
     </div>
 
-    <div class="recipe-description-container">
-        <p class="recipe-description">{{ recipe.description }}</p>
-    </div>
-
     <div class="recipe-content">
         <div class="main-content">
             <div class="ingredients-section">
                 <h2 class="section-title">Ingredients</h2>
                 <ul class="ingredients-list">
                     {% for ingredient in recipe.recipe_ingredients.all %}
-                        <li>
-                            {{ ingredient.raw_string | safe }}
-                            {% if user.is_authenticated %}
-                                {% if ingredient.ingredient in user_pantry %}
-                                    <i class="fa fa-check-circle text-success" 
-                                       title="{{ ingredient.ingredient.name }} is in your pantry"
-                                       data-bs-toggle="tooltip"
-                                       data-bs-placement="top"></i>
+                        <li class="d-flex justify-content-between align-items-center">
+                            <span>
+                                <a href="{% url 'recipes:search_recipes' %}?q={{ ingredient.ingredient.name|urlencode }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ ingredient.raw_string | safe }}
+                                </a>
+                            </span>
+                            <div class="ingredient-actions">
+                                {% if user.is_authenticated %}
+                                    {% if ingredient.ingredient in user_pantry %}
+                                        <i class="fa fa-check-circle text-success" 
+                                           title="{{ ingredient.ingredient.name }} is in your pantry"
+                                           data-bs-toggle="tooltip"
+                                           data-bs-placement="top"></i>
+                                    {% else %}
+                                        <i class="fa fa-times-circle text-danger" 
+                                           title="{{ ingredient.ingredient.name }} is not in your pantry"
+                                           data-bs-toggle="tooltip"
+                                           data-bs-placement="top"></i>
+                                    {% endif %}
+                                    <button class="btn btn-link text-primary p-0" 
+                                            onclick="addToShoppingList({{ ingredient.ingredient.id }})"
+                                            title="Add {{ ingredient.ingredient.name }} to shopping list"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="left">
+                                        <i class="fa fa-shopping-cart"></i>
+                                    </button>
                                 {% else %}
-                                    <i class="fa fa-times-circle text-danger" 
-                                       title="{{ ingredient.ingredient.name }} is not in your pantry"
+                                    <i class="fa fa-question-circle text-muted" 
+                                       title="Log in to track your available ingredients"
                                        data-bs-toggle="tooltip"
                                        data-bs-placement="top"></i>
+                                    <button class="btn btn-link text-primary p-0" 
+                                            onclick="showLoginModal()"
+                                            title="Log in to add to shopping list"
+                                            data-bs-toggle="tooltip"
+                                            data-bs-placement="left">
+                                        <i class="fa fa-shopping-cart"></i>
+                                    </button>
                                 {% endif %}
-                                <button class="btn btn-link text-primary p-0" 
-                                        onclick="addToShoppingList({{ ingredient.ingredient.id }})"
-                                        title="Add {{ ingredient.ingredient.name }} to shopping list"
-                                        data-bs-toggle="tooltip"
-                                        data-bs-placement="left">
-                                    <i class="fa fa-shopping-cart"></i>
-                                </button>
-                            {% endif %}
+                            </div>
                         </li>
                     {% endfor %}
                 </ul>
@@ -349,21 +373,21 @@
         <div class="recipe-details">
             <div class="time-info">
                 <div class="time-item">
-                    <i class="fa fa-clock-o"></i>
+                    <i class="fa fa-clock"></i>
                     <div>
-                        <strong>Prep Time:</strong> {{ recipe.prep_time|format_time }}
+                        <strong>Prep:</strong> {{ recipe.prep_time|format_time }}
                     </div>
                 </div>
                 <div class="time-item">
-                    <i class="fa fa-clock-o"></i>
+                    <i class="fa fa-clock"></i>
                     <div>
-                        <strong>Cook Time:</strong> {{ recipe.cook_time|format_time }}
+                        <strong>Cook:</strong> {{ recipe.cook_time|format_time }}
                     </div>
                 </div>
                 <div class="time-item">
-                    <i class="fa fa-clock-o"></i>
+                    <i class="fa fa-clock"></i>
                     <div>
-                        <strong>Total Time:</strong> {{ recipe.total_time|format_time }}
+                        <strong>Total:</strong> {{ recipe.total_time|format_time }}
                     </div>
                 </div>
             </div>
@@ -394,7 +418,10 @@
 
             <div class="recipe-tags">
                 {% for tag in recipe.recipe_tags.all %}
-                    <span class="badge">{{ tag.tag.name }}</span>
+                    <a href="{% url 'recipes:search_recipes' %}?q={{ tag.tag.name|urlencode }}" 
+                       class="badge text-decoration-none">
+                        {{ tag.tag.name }}
+                    </a>
                 {% endfor %}
             </div>
         </div>
@@ -549,9 +576,15 @@
         });
     }
 
+    function showLoginModal() {
+        const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+        loginModal.show();
+    }
+
+    // Initialize tooltips
     document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     });

@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login
+from django.contrib.auth import login, get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.mail import send_mail
@@ -7,6 +7,10 @@ from django.template.loader import render_to_string
 from .forms import CustomUserCreationForm
 from django.http import JsonResponse
 import json
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from allauth.account.models import EmailAddress
+from allauth.account.utils import send_email_confirmation
 
 # Create your views here.
 
@@ -90,3 +94,32 @@ def update_username(request):
         'success': False,
         'error': 'Invalid request method'
     })
+
+@require_POST
+@csrf_exempt
+def resend_verification_email(request):
+    try:
+        data = request.POST if request.POST else request.json()
+        email = data.get('email')
+        
+        if not email:
+            return JsonResponse({'success': False, 'error': 'Email is required'}, status=400)
+            
+        User = get_user_model()
+        try:
+            user = User.objects.get(email=email)
+            email_address = EmailAddress.objects.get_for_user(user, email)
+            
+            if email_address.verified:
+                return JsonResponse({'success': False, 'error': 'Email is already verified'}, status=400)
+                
+            send_email_confirmation(request, email_address)
+            return JsonResponse({'success': True})
+            
+        except User.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'User not found'}, status=404)
+        except EmailAddress.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Email address not found'}, status=404)
+            
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

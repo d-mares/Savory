@@ -227,74 +227,80 @@ def search_recipes(request):
     direction = request.GET.get('direction', 'desc')
     filter_type = request.GET.get('filter', '')
     
-    # Base queryset
-    recipes = Recipe.objects.all()
+    # Base queryset with prefetch_related to reduce database hits
+    recipes = Recipe.objects.prefetch_related(
+        'recipe_ingredients__ingredient',
+        'recipe_tags__tag',
+        'images'
+    )
     
     # Get user's recipe collection if authenticated
     user_recipe_collection = None
     if request.user.is_authenticated:
         user_recipe_collection = Recipe.objects.filter(
             collected_by__user=request.user
-        )
+        ).values_list('id', flat=True)
     
     # Apply search query
     if query:
-        # Search in recipe name, description, and category
-        recipes = recipes.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query) |
-            Q(recipe_category__icontains=query) |
-            # Search in ingredients
-            Q(recipe_ingredients__ingredient__name__icontains=query) |
-            # Search in tags
-            Q(recipe_tags__tag__name__icontains=query)
-        ).distinct()
+        # Create a Q object for the search
+        search_query = Q()
+        
+        # Add search conditions
+        search_query |= Q(name__icontains=query)
+        search_query |= Q(description__icontains=query)
+        search_query |= Q(recipe_category__icontains=query)
+        search_query |= Q(recipe_ingredients__ingredient__name__icontains=query)
+        search_query |= Q(recipe_tags__tag__name__icontains=query)
+        
+        # Apply the search query
+        recipes = recipes.filter(search_query).distinct()
     
     # Apply category filter
     if category:
         recipes = recipes.filter(recipe_category=category)
     
-    # Apply additional filters
-    if filter_type == 'available' and request.user.is_authenticated:
-        # Filter recipes where all ingredients are in user's pantry
-        recipes = recipes.filter(
-            ~Q(recipe_ingredients__ingredient__userpantry__user=request.user)
-        ).distinct()
-    
-    # Get matching ingredients for the sidebar
-    matching_ingredients = Ingredient.objects.filter(
-        name__icontains=query
-    ).distinct()[:10]  # Limit to 10 matching ingredients
-    
-    # Get unique categories that have matching recipes and sort them alphabetically
-    categories = Recipe.objects.filter(
-        id__in=recipes.values('id')
-    ).values_list('recipe_category', flat=True).distinct().order_by('recipe_category')
-    
-    # Calculate total recipes and pages
-    total_recipes = recipes.count()
-    total_pages = (total_recipes + page_size - 1) // page_size
-    
     # Apply sorting
-    if sort == 'time':
-        recipes = recipes.order_by(f"{'-' if direction == 'desc' else ''}total_time")
-    elif sort == 'rating':
-        recipes = recipes.order_by(f"{'-' if direction == 'desc' else ''}aggregated_rating")
-    elif sort == 'date':
-        recipes = recipes.order_by(f"{'-' if direction == 'desc' else ''}created_at")
-    elif sort == 'missing' and request.user.is_authenticated:
-        # Sort by number of missing ingredients
-        recipes = recipes.annotate(
-            missing_count=Count(
-                'recipe_ingredients',
-                filter=~Q(recipe_ingredients__ingredient__userpantry__user=request.user)
-            )
-        ).order_by(f"{'-' if direction == 'desc' else ''}missing_count")
+    if sort:
+        if sort == 'time':
+            recipes = recipes.order_by(f'{"-" if direction == "desc" else ""}total_time')
+        elif sort == 'rating':
+            recipes = recipes.order_by(f'{"-" if direction == "desc" else ""}aggregated_rating')
+        elif sort == 'name':
+            recipes = recipes.order_by(f'{"-" if direction == "desc" else ""}name')
+    
+    # Apply filter type
+    if filter_type:
+        if filter_type == 'available':
+            # Get user's pantry items if authenticated
+            if request.user.is_authenticated:
+                from apps.pantry.models import UserPantry
+                pantry_items = UserPantry.objects.filter(user=request.user).select_related('ingredient')
+                user_pantry = [item.ingredient for item in pantry_items]
+                
+                # Get related ingredients
+                related_ingredients = []
+                for item in pantry_items:
+                    related_ingredients.extend(item.related_ingredients.all())
+                
+                # Add related ingredients to user_pantry
+                user_pantry.extend(related_ingredients)
+                
+                # Filter recipes where all ingredients are in pantry
+                recipes = recipes.filter(
+                    ~Q(recipe_ingredients__ingredient__in=user_pantry)
+                ).distinct()
+    
+    # Get total count before pagination
+    total_recipes = recipes.count()
     
     # Apply pagination
     start = (page - 1) * page_size
     end = start + page_size
     recipes = recipes[start:end]
+    
+    # Get unique categories for filter
+    categories = Recipe.objects.values_list('recipe_category', flat=True).distinct().order_by('recipe_category')
     
     # Prepare recipe data with additional information
     recipe_data = []
@@ -317,19 +323,17 @@ def search_recipes(request):
         recipe_data.append(data)
     
     context = {
-        'query': query,
         'recipes': recipe_data,
-        'total_recipes': total_recipes,
-        'total_pages': total_pages,
-        'page': page,
-        'page_size': page_size,
+        'query': query,
+        'category': category,
         'categories': categories,
-        'current_category': category,
+        'current_page': page,
+        'total_pages': (total_recipes + page_size - 1) // page_size,
+        'total_recipes': total_recipes,
         'current_sort': sort,
         'current_direction': direction,
         'current_filter': filter_type,
-        'matching_ingredients': matching_ingredients,
-        'user_recipe_collection': user_recipe_collection,  # Add user's recipe collection to context
+        'user_recipe_collection': user_recipe_collection,
     }
     
     return render(request, 'recipes/search_results.html', context)

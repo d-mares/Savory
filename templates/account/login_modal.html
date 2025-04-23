@@ -25,9 +25,7 @@
                             <input type="checkbox" name="remember" class="form-check-input" id="id_remember">
                             <label class="form-check-label" for="id_remember">Remember me</label>
                         </div>
-                        {% if redirect_field_value %}
-                            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
-                        {% endif %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
                         <div class="d-grid gap-2">
                             <button class="btn btn-primary" type="submit">{% trans "Sign In" %}</button>
                         </div>
@@ -58,9 +56,7 @@
                             <label for="id_password2" class="form-label">Password (again)</label>
                             <input type="password" name="password2" class="form-control" id="id_password2" required>
                         </div>
-                        {% if redirect_field_value %}
-                            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
-                        {% endif %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
                         <div class="d-grid gap-2">
                             <button class="btn btn-primary" type="submit">{% trans "Sign Up" %}</button>
                         </div>
@@ -68,6 +64,11 @@
                         <div id="signupError" class="alert alert-danger mt-3 mb-0 d-none" role="alert">
                             <i class="fas fa-exclamation-circle me-2"></i>
                             <span id="signupErrorText"></span>
+                        </div>
+                        <!-- Success Alert -->
+                        <div id="signupSuccess" class="alert alert-success mt-3 mb-0 d-none" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span>Please check your email to verify your account. <a href="#" id="resendVerification" class="alert-link">Resend verification email</a></span>
                         </div>
                     </form>
                     <div class="text-center mt-3">
@@ -170,6 +171,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const loginErrorText = document.getElementById('loginErrorText');
     const signupError = document.getElementById('signupError');
     const signupErrorText = document.getElementById('signupErrorText');
+    const signupSuccess = document.getElementById('signupSuccess');
+    const resendVerification = document.getElementById('resendVerification');
 
     // Handle form toggling
     document.querySelectorAll('.toggle-form').forEach(function(link) {
@@ -192,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Hide errors when switching forms
             loginError.classList.add('d-none');
             signupError.classList.add('d-none');
+            signupSuccess.classList.add('d-none');
         });
     });
 
@@ -211,7 +215,12 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(response => {
                 if (response.redirected) {
-                    window.location.href = response.url;
+                    // Show success message instead of redirecting
+                    signupError.classList.add('d-none');
+                    signupSuccess.classList.remove('d-none');
+                    signupSuccess.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Clear form
+                    this.reset();
                 } else {
                     return response.text();
                 }
@@ -240,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (errorMessage.trim()) {
                         signupErrorText.textContent = errorMessage.trim();
                         signupError.classList.remove('d-none');
+                        signupSuccess.classList.add('d-none');
                         signupError.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }
@@ -248,7 +258,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 signupErrorText.textContent = 'An error occurred. Please try again.';
                 signupError.classList.remove('d-none');
+                signupSuccess.classList.add('d-none');
                 signupError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+    }
+
+    // Handle resend verification email
+    if (resendVerification) {
+        resendVerification.addEventListener('click', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('id_email').value;
+            
+            fetch('{% url "users:resend_verification_email" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    signupSuccess.querySelector('span').textContent = 'Verification email resent. Please check your inbox.';
+                } else {
+                    signupErrorText.textContent = data.error || 'Failed to resend verification email. Please try again.';
+                    signupError.classList.remove('d-none');
+                    signupSuccess.classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                signupErrorText.textContent = 'An error occurred while resending the verification email.';
+                signupError.classList.remove('d-none');
+                signupSuccess.classList.add('d-none');
             });
         });
     }
