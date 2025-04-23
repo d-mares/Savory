@@ -25,7 +25,7 @@
             }
 
             $.ajax({
-                url: '/recipes/admin/recipe/' + recipeId + '/images/',
+                url: '/recipes/recipe/' + recipeId + '/images/',
                 method: 'GET',
                 success: function(data) {
                     var options = ['<option value="">---------</option>'];

@@ -215,10 +215,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         file_path = options['file_path']
         batch_size = options['batch_size']
-        chunk_size = options['chunk_size']
         
         self.stdout.write(f'Importing recipes from {file_path}...')
-        self.stdout.write(f'Using batch size: {batch_size}, chunk size: {chunk_size}')
+        self.stdout.write(f'Using batch size: {batch_size}')
 
         # Check if file exists
         if not os.path.exists(file_path):
@@ -226,44 +225,29 @@ class Command(BaseCommand):
             return
 
         try:
-            # First, try to read the file info
-            self.stdout.write('Reading Excel file information...')
-            xl = pd.ExcelFile(file_path)
-            sheet_names = xl.sheet_names
-            self.stdout.write(f'Using sheet: {sheet_names[0]}')
-
-            # Get total number of rows
-            total_rows = len(pd.read_excel(file_path, sheet_name=sheet_names[0]))
-            self.stdout.write(f'Total rows to process: {total_rows}')
-
-            if total_rows == 0:
+            # Read the entire Excel file at once
+            self.stdout.write('Reading Excel file...')
+            df = pd.read_excel(file_path)
+            
+            if df.empty:
                 self.stdout.write(self.style.ERROR('No data found in the Excel file'))
                 return
 
-            # Process the Excel file in chunks
-            for chunk_start in range(0, total_rows, chunk_size):
-                chunk_end = min(chunk_start + chunk_size, total_rows)
-                self.stdout.write(f'Processing rows {chunk_start} to {chunk_end}...')
-                
-                df = pd.read_excel(
-                    file_path,
-                    sheet_name=sheet_names[0],
-                    skiprows=chunk_start,
-                    nrows=chunk_size
-                )
-                
-                if df.empty:
-                    self.stdout.write(self.style.WARNING(f'No data found in chunk {chunk_start}-{chunk_end}'))
-                    continue
+            total_rows = len(df)
+            self.stdout.write(f'Total rows to process: {total_rows}')
 
-                # Process recipes in batches
-                for i in range(0, len(df), batch_size):
-                    batch_df = df.iloc[i:i + batch_size]
-                    try:
-                        self._process_batch(batch_df)
-                    except Exception as e:
-                        self.stdout.write(self.style.ERROR(f'Error processing batch: {str(e)}'))
-                        continue
+            # Get all existing recipe IDs upfront
+            existing_recipe_ids = set(Recipe.objects.values_list('recipe_id', flat=True))
+            self.stdout.write(f'Found {len(existing_recipe_ids)} existing recipes')
+
+            # Process recipes in batches
+            for i in range(0, len(df), batch_size):
+                batch_df = df.iloc[i:i + batch_size]
+                try:
+                    self._process_batch(batch_df, existing_recipe_ids)
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f'Error processing batch: {str(e)}'))
+                    continue
 
             self.stdout.write(self.style.SUCCESS('Recipe import completed'))
 
@@ -272,22 +256,17 @@ class Command(BaseCommand):
             import traceback
             self.stdout.write(traceback.format_exc())
 
-    def _process_batch(self, batch_df):
-        # Get all recipe IDs in this batch
-        recipe_ids = batch_df['RecipeId'].tolist()
-        
-        # Get existing recipes
-        existing_recipes = {
-            recipe.recipe_id: recipe 
-            for recipe in Recipe.objects.filter(recipe_id__in=recipe_ids)
-        }
-        
+    def _process_batch(self, batch_df, existing_recipe_ids):
         # Prepare bulk create/update data
         recipes_to_create = []
-        recipes_to_update = []
         
         for _, row in batch_df.iterrows():
             try:
+                # Skip if recipe already exists
+                if row['RecipeId'] in existing_recipe_ids:
+                    self.stdout.write(self.style.WARNING(f'Skipping existing recipe {row.get("Name", "Unknown")} (ID: {row["RecipeId"]})'))
+                    continue
+                    
                 # Skip recipes with invalid values
                 for field in ['AggregatedRating', 'Calories', 'FatContent', 'SaturatedFatContent', 
                             'CholesterolContent', 'SodiumContent', 'CarbohydrateContent', 
@@ -331,13 +310,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f'Skipping recipe {row.get("Name", "Unknown")} - missing both prep_time and cook_time'))
                     continue
                 
-                if row['RecipeId'] in existing_recipes:
-                    recipe = existing_recipes[row['RecipeId']]
-                    for key, value in recipe_data.items():
-                        setattr(recipe, key, value)
-                    recipes_to_update.append(recipe)
-                else:
-                    recipes_to_create.append(Recipe(**recipe_data))
+                recipes_to_create.append(Recipe(**recipe_data))
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f'Skipping recipe {row.get("Name", "Unknown")} - error: {str(e)}'))
                 continue
@@ -347,6 +320,7 @@ class Command(BaseCommand):
             try:
                 with transaction.atomic():
                     Recipe.objects.bulk_create(recipes_to_create)
+                    self.stdout.write(self.style.SUCCESS(f'Created {len(recipes_to_create)} new recipes'))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Error during bulk create: {str(e)}'))
                 # Try creating recipes one by one
@@ -357,34 +331,12 @@ class Command(BaseCommand):
                     except Exception as e:
                         self.stdout.write(self.style.WARNING(f'Error creating recipe {recipe.name}: {str(e)}'))
         
-        # Bulk update existing recipes
-        if recipes_to_update:
-            try:
-                with transaction.atomic():
-                    Recipe.objects.bulk_update(
-                        recipes_to_update,
-                        [field.name for field in Recipe._meta.fields if field.name != 'id']
-                    )
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f'Error during bulk update: {str(e)}'))
-                # Try updating recipes one by one
-                for recipe in recipes_to_update:
-                    try:
-                        with transaction.atomic():
-                            recipe.save()
-                    except Exception as e:
-                        self.stdout.write(self.style.WARNING(f'Error updating recipe {recipe.name}: {str(e)}'))
-        
-        # Get all recipes (both new and updated) for this batch
-        all_recipes = {
-            recipe.recipe_id: recipe 
-            for recipe in Recipe.objects.filter(recipe_id__in=recipe_ids)
-        }
-        
         # Process steps, ingredients, tags, and images for each recipe
         for _, row in batch_df.iterrows():
             try:
-                recipe = all_recipes[row['RecipeId']]
+                recipe = Recipe.objects.filter(recipe_id=row['RecipeId']).first()
+                if not recipe:
+                    continue
                 
                 # Process steps
                 def parse_list(value):

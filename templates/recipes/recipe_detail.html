@@ -1,28 +1,90 @@
 {% extends "base.html" %}
 {% load static %}
+{% load recipe_filters %}
 
 {% block title %}{{ recipe.name }} - Savory{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Typography */
+    .recipe-title {
+        font-family: 'Source Serif Pro', serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+        color: #333;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    .recipe-description {
+        font-family: 'STIX Two Text', serif;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        color: #444;
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        font-family: 'Source Serif Pro', serif;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 1rem;
+    }
+    .meta-text {
+        font-family: 'Renner', sans-serif;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #757575;
+    }
+
+    /* Layout */
+    .recipe-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .recipe-header {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgb(226, 221, 204);
+        width: 100%;
+    }
+    .recipe-meta {
+        display: flex;
+        gap: 2rem;
+        margin: 1rem 0;
+        justify-content: center;
+    }
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .meta-item i {
+        color: #757575;
+    }
+
+    /* Image Gallery */
+    .image-gallery {
+        width: 100%;
+    }
     .main-image {
         width: 100%;
-        height: 400px;
-        object-fit: contain;
-        border-radius: 8px;
+        height: 500px;
+        object-fit: cover;
+        margin-bottom: 1rem;
     }
     .thumbnail-container {
         display: flex;
         gap: 10px;
-        margin-top: 15px;
         overflow-x: auto;
         padding-bottom: 10px;
     }
     .thumbnail {
-        width: 100px;
-        height: 100px;
+        width: 75px;
+        height: 75px;
         object-fit: cover;
-        border-radius: 4px;
         cursor: pointer;
         transition: transform 0.2s;
     }
@@ -32,16 +94,197 @@
     .thumbnail.active {
         border: 3px solid #0d6efd;
     }
+
+    /* Content Layout */
+    .recipe-content {
+        display: grid;
+        grid-template-columns: 3fr 1fr;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    /* Ingredients & Instructions */
+    .ingredients-section, .instructions-section {
+        margin-bottom: 2rem;
+    }
+    .ingredients-list {
+        list-style: none;
+        padding: 0;
+    }
+    .ingredients-list li {
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.1rem;
+        line-height: 1.5;
+    }
+    .instructions-list {
+        counter-reset: step;
+        list-style: none;
+        padding: 0;
+    }
+    .instructions-list li {
+        margin-bottom: 1.5rem;
+        position: relative;
+        padding-left: 2.5rem;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+    .instructions-list li::before {
+        counter-increment: step;
+        content: counter(step);
+        position: absolute;
+        left: 0;
+        top: 0;
+        background-color: #0d6efd;
+        color: white;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+    }
+
+    /* Recipe Details Sidebar */
+    .recipe-details {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        height: fit-content;
+    }
+    .time-info {
+        margin-bottom: 1.5rem;
+    }
+    .time-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .time-item i {
+        color: #757575;
+        width: 20px;
+        text-align: center;
+    }
+    .recipe-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    .recipe-tags .badge {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.8rem;
+        background-color: #e9ecef;
+        color: #495057;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    .action-buttons .btn {
+        width: 100%;
+        padding: 0.75rem;
+    }
+
+    /* Recipe Description Container */
+    .recipe-description-container {
+        max-width: 1000px;
+        margin: 0 auto 2rem;
+    }
+
+    /* Nutrition Facts Label Styles */
+    .performance-facts {
+        border: 1px solid black;
+        margin: 20px;
+        float: left;
+        width: 280px;
+        padding: 0.5rem;
+    }
+    .performance-facts table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .performance-facts__title {
+        font-weight: bold;
+        font-size: 2rem;
+        margin: 0 0 0.25rem 0;
+    }
+    .performance-facts__header {
+        border-bottom: 10px solid black;
+        padding: 0 0 0.25rem 0;
+        margin: 0 0 0.5rem 0;
+    }
+    .performance-facts__header p {
+        margin: 0;
+    }
+    .performance-facts__table th,
+    .performance-facts__table td {
+        font-weight: normal;
+        text-align: left;
+        padding: 0.25rem 0;
+        border-top: 1px solid black;
+        white-space: nowrap;
+    }
+    .performance-facts__table td:last-child {
+        text-align: right;
+    }
+    .blank-cell {
+        width: 1rem;
+        border-top: 0;
+    }
+    .thick-row th,
+    .thick-row td {
+        border-top-width: 5px;
+    }
+    .small-info {
+        font-size: 0.7rem;
+    }
+    .thick-end {
+        border-bottom: 10px solid black;
+    }
+    .thin-end {
+        border-bottom: 1px solid black;
+    }
+    .text-center {
+        text-align: center;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container mt-5">
     {% csrf_token %}
-    <div class="row">
-        <div class="col-md-8">
+    
+    <div class="recipe-header row">
+        <div class="col-md-6 d-flex flex-column justify-content-center">
+            <h1 class="recipe-title">{{ recipe.name | safe }}</h1>
+            <div class="recipe-meta">
+                <div class="meta-item">
+                    <i class="fa fa-clock-o"></i>
+                    <span>{{ recipe.total_time|format_time }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fa fa-users"></i>
+                    <span>{{ recipe.servings }} servings</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fa fa-star"></i>
+                    <span>{{ recipe.aggregated_rating }}/5 ({{ recipe.review_count }} reviews)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
             {% if images %}
-                <div class="image-gallery mb-4">
+                <div class="image-gallery">
                     <img src="{{ images.0.url }}" class="main-image" id="mainImage" alt="{{ recipe.name }}">
                     <div class="thumbnail-container">
                         {% for image in images %}
@@ -53,126 +296,202 @@
                     </div>
                 </div>
             {% endif %}
+        </div>
+    </div>
 
-            <h1>{{ recipe.name | safe }}</h1>
-            <p class="text-muted">{{ recipe.description }}</p>
-            
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <h5>Prep Time</h5>
-                    <p>{{ recipe.prep_time|default:"Not specified" }}</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>Cook Time</h5>
-                    <p>{{ recipe.cook_time|default:"Not specified" }}</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>Total Time</h5>
-                    <p>{{ recipe.total_time|default:"Not specified" }}</p>
-                </div>
-            </div>
+    <div class="recipe-description-container">
+        <p class="recipe-description">{{ recipe.description }}</p>
+    </div>
 
-            <div class="row mt-4">
-                <div class="col-md-6">
-                    <h3>Ingredients</h3>
-                    <ul class="list-group">
-                        {% for ingredient in recipe.recipe_ingredients.all %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <div>
-                                    {{ ingredient.raw_string | safe }}
-                                    {% if user.is_authenticated %}
-                                        {% if ingredient.ingredient in user_pantry %}
-                                            <i class="fa fa-check-circle text-success ms-2" 
-                                               title="{{ ingredient.ingredient.name }} is in your pantry"
-                                               data-bs-toggle="tooltip"
-                                               data-bs-placement="top"></i>
-                                        {% else %}
-                                            <i class="fa fa-times-circle text-danger ms-2" 
-                                               title="{{ ingredient.ingredient.name }} is not in your pantry"
-                                               data-bs-toggle="tooltip"
-                                               data-bs-placement="top"></i>
-                                        {% endif %}
-                                    {% endif %}
-                                </div>
-                                {% if user.is_authenticated %}
-                                    <button class="btn btn-link text-primary p-0" 
-                                            onclick="addToShoppingList({{ ingredient.ingredient.id }})"
-                                            title="Add {{ ingredient.ingredient.name }} to shopping list"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="left">
-                                        <i class="fa fa-shopping-cart"></i>
-                                    </button>
+    <div class="recipe-content">
+        <div class="main-content">
+            <div class="ingredients-section">
+                <h2 class="section-title">Ingredients</h2>
+                <ul class="ingredients-list">
+                    {% for ingredient in recipe.recipe_ingredients.all %}
+                        <li>
+                            {{ ingredient.raw_string | safe }}
+                            {% if user.is_authenticated %}
+                                {% if ingredient.ingredient in user_pantry %}
+                                    <i class="fa fa-check-circle text-success" 
+                                       title="{{ ingredient.ingredient.name }} is in your pantry"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"></i>
                                 {% else %}
-                                    <button class="btn btn-link text-primary p-0" 
-                                            onclick="handleLoginRequiredAction(event, '/shopping/add/{{ ingredient.ingredient.id }}/')"
-                                            title="Add {{ ingredient.ingredient.name }} to shopping list"
-                                            data-bs-toggle="tooltip"
-                                            data-bs-placement="left">
-                                        <i class="fa fa-shopping-cart"></i>
-                                    </button>
+                                    <i class="fa fa-times-circle text-danger" 
+                                       title="{{ ingredient.ingredient.name }} is not in your pantry"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="top"></i>
                                 {% endif %}
-                            </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <h3>Nutrition Information</h3>
-                    <ul class="list-group">
-                        <li class="list-group-item">Calories: {{ recipe.calories }} kcal</li>
-                        <li class="list-group-item">Protein: {{ recipe.protein_content }}g</li>
-                        <li class="list-group-item">Carbohydrates: {{ recipe.carbohydrate_content }}g</li>
-                        <li class="list-group-item">Fat: {{ recipe.fat_content }}g</li>
-                        <li class="list-group-item">Fiber: {{ recipe.fiber_content }}g</li>
-                        <li class="list-group-item">Sugar: {{ recipe.sugar_content }}g</li>
-                    </ul>
-                </div>
+                                <button class="btn btn-link text-primary p-0" 
+                                        onclick="addToShoppingList({{ ingredient.ingredient.id }})"
+                                        title="Add {{ ingredient.ingredient.name }} to shopping list"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="left">
+                                    <i class="fa fa-shopping-cart"></i>
+                                </button>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
             </div>
 
-            <div class="mt-4">
-                <h3>Instructions</h3>
-                <ol class="list-group list-group-numbered">
+            <div class="instructions-section">
+                <h2 class="section-title">Instructions</h2>
+                <ol class="instructions-list">
                     {% for step in recipe.steps.all %}
-                        <li class="list-group-item">{{ step.description | safe }}</li>
+                        <li>{{ step.description | safe }}</li>
                     {% endfor %}
                 </ol>
             </div>
         </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Recipe Details</h5>
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">Category: {{ recipe.recipe_category }}</li>
-                        <li class="list-group-item">Rating: {{ recipe.aggregated_rating }}/5 ({{ recipe.review_count }} reviews)</li>
-                        <li class="list-group-item">Servings: {{ recipe.servings }}</li>
-                        <li class="list-group-item">Serving Size: {{ recipe.serving_size }}</li>
-                    </ul>
-                    <div class="mt-3">
-                        {% if recipe in user.recipe_collection.all %}
-                            <a href="{% url 'recipes:remove_from_collection' recipe_id=recipe.recipe_id %}" 
-                               class="btn btn-danger w-100"
-                               onclick="handleLoginRequiredAction(event, this.href)">
-                                <i class="fa fa-heart"></i> Remove from Collection
-                            </a>
-                        {% else %}
-                            <a href="{% url 'recipes:add_to_collection' recipe_id=recipe.recipe_id %}" 
-                               class="btn btn-primary w-100"
-                               onclick="handleLoginRequiredAction(event, this.href)">
-                                <i class="fa fa-heart-o"></i> Add to Collection
-                            </a>
-                        {% endif %}
+
+        <div class="recipe-details">
+            <div class="time-info">
+                <div class="time-item">
+                    <i class="fa fa-clock-o"></i>
+                    <div>
+                        <strong>Prep Time:</strong> {{ recipe.prep_time|format_time }}
+                    </div>
+                </div>
+                <div class="time-item">
+                    <i class="fa fa-clock-o"></i>
+                    <div>
+                        <strong>Cook Time:</strong> {{ recipe.cook_time|format_time }}
+                    </div>
+                </div>
+                <div class="time-item">
+                    <i class="fa fa-clock-o"></i>
+                    <div>
+                        <strong>Total Time:</strong> {{ recipe.total_time|format_time }}
                     </div>
                 </div>
             </div>
-            
-            <div class="mt-4">
-                <h5>Tags</h5>
-                <div class="d-flex flex-wrap gap-2">
-                    {% for tag in recipe.recipe_tags.all %}
-                        <span class="badge bg-primary">{{ tag.tag.name }}</span>
-                    {% endfor %}
-                </div>
+
+            <div class="mb-3">
+                <span class="badge bg-secondary">{{ recipe.recipe_category }}</span>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#nutritionModal">
+                    <i class="fa fa-info-circle"></i> Nutrition Information
+                </button>
+
+                {% if recipe in user.recipe_collection.all %}
+                    <a href="{% url 'recipes:remove_from_collection' recipe_id=recipe.recipe_id %}" 
+                       class="btn btn-danger"
+                       onclick="handleLoginRequiredAction(event, this.href)">
+                        <i class="fa fa-heart"></i> Remove from Collection
+                    </a>
+                {% else %}
+                    <a href="{% url 'recipes:add_to_collection' recipe_id=recipe.recipe_id %}" 
+                       class="btn btn-primary"
+                       onclick="handleLoginRequiredAction(event, this.href)">
+                        <i class="fa fa-heart-o"></i> Add to Collection
+                    </a>
+                {% endif %}
+            </div>
+
+            <div class="recipe-tags">
+                {% for tag in recipe.recipe_tags.all %}
+                    <span class="badge">{{ tag.tag.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Nutrition Modal -->
+<div class="modal fade" id="nutritionModal" tabindex="-1" aria-labelledby="nutritionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="nutritionModalLabel">Nutrition Information</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <section class="performance-facts">
+                    <header class="performance-facts__header">
+                        <h1 class="performance-facts__title">Nutrition Facts</h1>
+                        <p>Serving Size {{ recipe.serving_size }}</p>
+                        <p>Serving Per Container {{ recipe.servings }}</p>
+                    </header>
+                    <table class="performance-facts__table">
+                        <thead>
+                            <tr>
+                                <th colspan="3" class="small-info">
+                                    Amount Per Serving
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th colspan="3">
+                                    <b>Calories</b>
+                                    {{ recipe.calories }}
+                                </th>
+                            </tr>
+                            <tr class="thick-row">
+                                <td colspan="3" class="small-info">
+                                    <b>% Daily Value*</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th colspan="2">
+                                    <b>Total Fat</b>
+                                    {{ recipe.fat_content }}g
+                                </th>
+                                <td>
+                                    <b>{{ recipe.fat_content|multiply:100|divide:65|floatformat:0 }}%</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th colspan="2">
+                                    <b>Cholesterol</b>
+                                    {{ recipe.cholesterol_content|default:"0" }}mg
+                                </th>
+                                <td>
+                                    <b>{{ recipe.cholesterol_content|default:"0"|multiply:100|divide:300|floatformat:0 }}%</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th colspan="2">
+                                    <b>Total Carbohydrate</b>
+                                    {{ recipe.carbohydrate_content }}g
+                                </th>
+                                <td>
+                                    <b>{{ recipe.carbohydrate_content|multiply:100|divide:275|floatformat:0 }}%</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="blank-cell"></td>
+                                <th>
+                                    Dietary Fiber
+                                    {{ recipe.fiber_content }}g
+                                </th>
+                                <td>
+                                    <b>{{ recipe.fiber_content|multiply:100|divide:28|floatformat:0 }}%</b>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="blank-cell"></td>
+                                <th>
+                                    Sugars
+                                    {{ recipe.sugar_content }}g
+                                </th>
+                                <td></td>
+                            </tr>
+                            <tr class="thick-end">
+                                <th colspan="2">
+                                    <b>Protein</b>
+                                    {{ recipe.protein_content }}g
+                                </th>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="small-info">* Percent Daily Values are based on a 2,000 calorie diet. Your daily values may be higher or lower depending on your calorie needs:</p>
+                </section>
             </div>
         </div>
     </div>
@@ -181,10 +500,7 @@
 {% block extra_js %}
 <script>
     function changeMainImage(thumbnail, imageUrl) {
-        // Update main image
         document.getElementById('mainImage').src = imageUrl;
-        
-        // Update active thumbnail
         document.querySelectorAll('.thumbnail').forEach(thumb => {
             thumb.classList.remove('active');
         });
@@ -214,14 +530,12 @@
         })
         .then(data => {
             if (data.success) {
-                // Show success message
                 const button = document.querySelector(`button[onclick="addToShoppingList(${ingredientId})"]`);
                 const originalIcon = button.innerHTML;
                 button.innerHTML = '<i class="fa fa-check"></i>';
                 button.classList.remove('text-primary');
                 button.classList.add('text-success');
                 
-                // Reset button after 2 seconds
                 setTimeout(() => {
                     button.innerHTML = originalIcon;
                     button.classList.remove('text-success');
@@ -235,7 +549,6 @@
         });
     }
 
-    // Initialize tooltips
     document.addEventListener('DOMContentLoaded', function() {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
