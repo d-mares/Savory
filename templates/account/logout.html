@@ -4,11 +4,11 @@
 {% block title %}Sign Out - Savory{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row">
+<div class="container d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 60px);">
+    <div class="row w-100">
         <div class="col-md-6 offset-md-3">
             <div class="card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header" style="background-color: var(--cal-poly-green); color: var(--mint-cream);">
                     <h2 class="mb-0">Sign Out</h2>
                 </div>
                 <div class="card-body">
@@ -19,7 +19,7 @@
                             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
                         {% endif %}
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-danger">
+                            <button type="submit" class="btn" style="background-color: var(--cal-poly-green); color: var(--mint-cream);">
                                 <i class="fa fa-sign-out-alt me-2"></i>{% trans 'Sign Out' %}
                             </button>
                             <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary">

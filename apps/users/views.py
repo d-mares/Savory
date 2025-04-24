@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from allauth.account.models import EmailAddress
 from allauth.account.utils import send_email_confirmation
+from allauth.account.views import PasswordResetFromKeyView
 
 # Create your views here.
 
@@ -19,6 +20,15 @@ def signup(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            # Create EmailAddress object for the user
+            email_address = EmailAddress.objects.create(
+                user=user,
+                email=user.email,
+                primary=True,
+                verified=False
+            )
+            # Send email confirmation
+            send_email_confirmation(request, email_address)
             login(request, user)
             messages.success(request, 'Please check your email to verify your account.')
             return redirect('home')
@@ -123,3 +133,8 @@ def resend_verification_email(request):
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+class CustomPasswordResetFromKeyView(PasswordResetFromKeyView):
+    def get_success_url(self):
+        messages.success(self.request, 'Your password has been successfully changed.')
+        return 'home'
