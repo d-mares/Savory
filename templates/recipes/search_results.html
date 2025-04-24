@@ -24,7 +24,7 @@
         display: flex;
         justify-content: center;
         gap: 1rem;
-        margin-top: 2rem;
+        margin: 2rem 0 4rem 0;
     }
     .pagination .btn {
         min-width: 100px;
@@ -45,7 +45,7 @@
     }
     .recipe-cards-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
         gap: 1rem;
         padding: 1rem;
     }
@@ -89,17 +89,22 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
+        margin: 1rem 0;
     }
     .recipe-info {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
+        min-width: 200px;
     }
     .recipe-info span {
         display: block;
+        white-space: nowrap;
     }
     .stars {
         margin-left: auto;
+        min-width: 120px;
+        text-align: right;
     }
 </style>
 {% endblock %}
@@ -127,10 +132,7 @@
                                 <option value="">Default</option>
                                 <option value="time" {% if current_sort == 'time' %}selected{% endif %}>Time</option>
                                 <option value="rating" {% if current_sort == 'rating' %}selected{% endif %}>Rating</option>
-                                <option value="date" {% if current_sort == 'date' %}selected{% endif %}>Date</option>
-                                {% if user.is_authenticated %}
-                                <option value="missing" {% if current_sort == 'missing' %}selected{% endif %}>Missing Ingredients</option>
-                                {% endif %}
+                                <option value="name" {% if current_sort == 'name' %}selected{% endif %}>Name</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -154,7 +156,7 @@
                             <select name="category" class="form-select">
                                 <option value="">All Categories</option>
                                 {% for category in categories %}
-                                <option value="{{ category }}" {% if current_category == category %}selected{% endif %}>{{ category }}</option>
+                                <option value="{{ category }}" {% if category == current_category %}selected{% endif %}>{{ category }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -176,7 +178,7 @@
 
         <!-- Recipe Grid -->
         <div class="col-md-9">
-            <div class="recipe-cards-container">
+            <div class="recipe-cards-container" id="recipeGrid">
                 {% for data in recipes %}
                 <div class="recipe-card">
                     <div class="card-header" style="background-image: url('{{ data.recipe.images.first.url }}')">
@@ -186,9 +188,9 @@
                         <div class="missing-indicator">{{ data.missing_count }} missing ingredients</div>
                         {% endif %}
                         <div class="icon">
-                            <a href="#" class="heart-link {% if data.recipe in user_recipe_collection %}filled{% endif %}" 
+                            <a href="#" class="heart-link {% if data.recipe.recipe_id in user_recipe_collection %}filled{% endif %}" 
                                data-recipe-id="{{ data.recipe.recipe_id }}">
-                                <i class="fa {% if data.recipe in user_recipe_collection %}fa-heart{% else %}fa-heart-o{% endif %}"></i>
+                                <i class="fa {% if data.recipe.recipe_id in user_recipe_collection %}fa-heart{% else %}fa-heart-o{% endif %}"></i>
                             </a>
                         </div>
                     </div>
@@ -197,7 +199,7 @@
                         <div class="recipe-meta">
                             <div class="recipe-info">
                                 <span><i class="fa fa-clock-o"></i> {{ data.total_time|format_time }}</span>
-                                <span><i class="fa fa-users"></i> <span class='serves-text'>Serves</span> {{ data.recipe.servings }}</span>
+                                <span><i class="fa fa-users"></i> Serves {{ data.recipe.servings }}</span>
                             </div>
                             <div class="stars">
                                 <li>
@@ -221,22 +223,22 @@
             <!-- Pagination -->
             {% if total_pages > 1 %}
             <div class="pagination">
-                {% if page > 1 %}
-                <a href="?page={{ page|add:'-1' }}&q={{ query|urlencode }}{% if current_category %}&category={{ current_category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" class="btn btn-outline-primary">Previous</a>
+                {% if current_page > 1 %}
+                <a href="?page={{ current_page|add:'-1' }}&q={{ query|urlencode }}{% if category %}&category={{ category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" class="btn btn-outline-primary">Previous</a>
                 {% endif %}
                 
                 <div class="page-selector">
                     <span>Page</span>
                     <select class="form-select" onchange="window.location.href=this.value">
                         {% for i in total_pages|get_range %}
-                        <option value="?page={{ i }}&q={{ query|urlencode }}{% if current_category %}&category={{ current_category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" {% if i == page %}selected{% endif %}>{{ i }}</option>
+                        <option value="?page={{ i }}&q={{ query|urlencode }}{% if category %}&category={{ category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" {% if i == current_page %}selected{% endif %}>{{ i }}</option>
                         {% endfor %}
                     </select>
                     <span>of {{ total_pages }}</span>
                 </div>
                 
-                {% if page < total_pages %}
-                <a href="?page={{ page|add:'1' }}&q={{ query|urlencode }}{% if current_category %}&category={{ current_category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" class="btn btn-outline-primary">Next</a>
+                {% if current_page < total_pages %}
+                <a href="?page={{ current_page|add:'1' }}&q={{ query|urlencode }}{% if category %}&category={{ category|urlencode }}{% endif %}{% if current_sort %}&sort={{ current_sort|urlencode }}{% endif %}&direction={{ current_direction|urlencode }}{% if current_filter %}&filter={{ current_filter|urlencode }}{% endif %}" class="btn btn-outline-primary">Next</a>
                 {% endif %}
             </div>
             {% endif %}
@@ -289,7 +291,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('There was an error updating your collection. Please try again.');
                 });
             {% else %}
-                handleLoginRequiredAction(e, actionUrl);
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
             {% endif %}
         });
     });

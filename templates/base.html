@@ -225,6 +225,37 @@
         .navbar-toggler-icon {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 89, 30, 1)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
         }
+
+        /* Mobile menu overlay */
+        #mobileNavMenu {
+            position: fixed;
+            top: 90px;
+            left: 0;
+            right: 0;
+            background-color: white;
+            z-index: 1020;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-height: calc(100vh - 90px);
+            overflow-y: auto;
+        }
+
+        /* Search overlay */
+        #searchCollapse {
+            position: fixed;
+            top: 90px;
+            left: 0;
+            right: 0;
+            background-color: white;
+            z-index: 1020;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+
+        /* Adjust for scrolled navbar */
+        .navbar.scrolled + #mobileNavMenu,
+        .navbar.scrolled + #searchCollapse {
+            top: 70px;
+        }
     </style>
 </head>
 <body>
@@ -245,13 +276,10 @@
                                 <a class="nav-link" href="{% url 'home' %}">Home</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#">Products</a>
+                                <a class="nav-link" href="{% url 'shopping:shopping_list' %}">Shopping List</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="#">About</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#">Contact</a>
+                                <a class="nav-link" href="{% url 'pantry:pantry_list' %}">Pantry</a>
                             </li>
                         </ul>
                     </div>
@@ -314,7 +342,7 @@
         </div>
     </nav>
     
-    <!-- Mobile dropdown menu (shows below navbar, pushes content down) -->
+    <!-- Mobile dropdown menu (shows as overlay) -->
     <div class="collapse d-lg-none" id="mobileNavMenu">
         <div class="container py-2">
             <ul class="nav flex-column nav-menu">
@@ -322,19 +350,16 @@
                     <a class="nav-link" href="{% url 'home' %}">Home</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">Products</a>
+                    <a class="nav-link" href="{% url 'shopping:shopping_list' %}">Shopping List</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">About</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#">Contact</a>
+                    <a class="nav-link" href="{% url 'pantry:pantry_list' %}">Pantry</a>
                 </li>
             </ul>
         </div>
     </div>
       
-    <!-- Collapsible Search Bar (mobile only) -->
+    <!-- Collapsible Search Bar (mobile only, shows as overlay) -->
     <div class="collapse d-lg-none" id="searchCollapse">
         <div class="container py-2">
             <div class="search">

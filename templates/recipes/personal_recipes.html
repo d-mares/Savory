@@ -36,7 +36,8 @@
         padding: 8px 16px;
         border-radius: 20px;
         background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
+        border: 1px solid #00591e;
+        color: #00591e;
         cursor: pointer;
         transition: all 0.3s ease;
     }
@@ -44,9 +45,9 @@
         background-color: #e9ecef;
     }
     .category-btn.active {
-        background-color: #0d6efd;
+        background-color: #00591e;
         color: white;
-        border-color: #0d6efd;
+        border-color: #00591e;
     }
     .recipe-card.hidden {
         display: none;
@@ -62,6 +63,29 @@
         flex: 0 0 400px;
         margin-bottom: 20px;
     }
+    .card-header {
+        position: relative;
+    }
+    .availability-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #28a745;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.9em;
+    }
+    .missing-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color:#ffc107;
+        color: black;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.9em;
+    }
     .filter-controls {
         display: flex;
         gap: 10px;
@@ -76,11 +100,13 @@
         width: 18px;
         height: 18px;
         cursor: pointer;
+        accent-color: #00591e;
     }
     .filter-checkbox label {
         margin: 0;
         cursor: pointer;
         white-space: nowrap;
+        color: #00591e;
     }
     .sort-controls {
         display: flex;
@@ -90,9 +116,14 @@
     .sort-select {
         padding: 8px 16px;
         border-radius: 20px;
-        border: 1px solid #dee2e6;
+        border: 1px solid #00591e;
         background-color: #f8f9fa;
+        color: #00591e;
         cursor: pointer;
+    }
+    .sort-select:focus {
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(0, 89, 30, 0.25);
     }
     .sort-direction {
         display: flex;
@@ -101,30 +132,21 @@
     .sort-direction-btn {
         padding: 8px;
         border-radius: 20px;
-        border: 1px solid #dee2e6;
+        border: 1px solid #00591e;
         background-color: #f8f9fa;
+        color: #00591e;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
     }
+    .sort-direction-btn:hover {
+        background-color: #e9ecef;
+    }
     .sort-direction-btn.active {
-        background-color: #0d6efd;
+        background-color: #00591e;
         color: white;
-        border-color: #0d6efd;
-    }
-    .ingredient-status {
-        margin-top: 10px;
-        font-size: 0.9em;
-    }
-    .ingredient-status i {
-        margin-right: 5px;
-    }
-    .ingredient-status .text-success {
-        color: #28a745;
-    }
-    .ingredient-status .text-danger {
-        color: #dc3545;
+        border-color: #00591e;
     }
     @media (max-width: 992px) {
         .recipe-card {
@@ -182,7 +204,6 @@
                             onclick="updateDirection('asc')" title="Ascending">
                         <i class="fa fa-sort-amount-asc"></i>
                     </button>
-                    
                 </div>
             </div>
 
@@ -198,6 +219,15 @@
             {% for item in recipes %}
                 <div class="recipe-card" data-category="{{ item.category }}">
                     <div class="card-header" style="background-image: url('{{ item.recipe.images.first.url }}')">
+                        {% if item.missing_ingredients_count == 0 %}
+                            <div class="availability-indicator">
+                                <i class="fa fa-check-circle"></i> All ingredients available
+                            </div>
+                        {% else %}
+                            <div class="missing-indicator">
+                                <i class="fa fa-times-circle"></i> Missing {{ item.missing_ingredients_count }} ingredients
+                            </div>
+                        {% endif %}
                     </div>
                     <div class="card-content">
                         <h1>{{ item.recipe.name | safe}}</h1>
@@ -221,17 +251,6 @@
                                 </li>
                             </div>
                         </div>
-                        <div class="ingredient-status">
-                            {% if item.missing_ingredients_count == 0 %}
-                                <span class="text-success">
-                                    <i class="fa fa-check-circle"></i> All ingredients available
-                                </span>
-                            {% else %}
-                                <span class="text-danger">
-                                    <i class="fa fa-times-circle"></i> Missing {{ item.missing_ingredients_count }} ingredients
-                                </span>
-                            {% endif %}
-                        </div>
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <a href="{% url 'recipes:recipe_detail' recipe_id=item.recipe.recipe_id %}" class="btn">Let's Cook!</a>
                             <a href="{% url 'recipes:remove_from_collection' recipe_id=item.recipe.recipe_id %}" class="btn btn-danger">
@@ -250,7 +269,6 @@
     {% endif %}
 </div>
 
-{% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const categoryButtons = document.querySelectorAll('.category-btn');
@@ -321,4 +339,4 @@
     }
 </script>
 {% endblock %}
-{% endblock %} 
+ 

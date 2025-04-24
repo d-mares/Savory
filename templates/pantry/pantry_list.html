@@ -9,39 +9,41 @@
             <div class="card">
                 <div class="card-body">
                     {% if user_pantry %}
-                        <div class="row">
-                            {% for item in user_pantry %}
-                                <div class="col-md-4 mb-3">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h5 class="card-title">{{ item.ingredient.name }}</h5>
-                                            <p class="card-text">Added: {{ item.added_at|date:"M d, Y" }}</p>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <button class="btn btn-info btn-sm" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#relatedIngredientsModal"
-                                                        data-ingredient-id="{{ item.ingredient.id }}"
-                                                        data-ingredient-name="{{ item.ingredient.name }}">
-                                                    Select Related Ingredients
-                                                </button>
-                                                <div>
-                                                    <button class="btn btn-link text-primary p-0 me-2" 
-                                                            onclick="addToShoppingList({{ item.ingredient.id }})"
-                                                            title="Add to shopping list"
-                                                            data-bs-toggle="tooltip"
-                                                            data-bs-placement="top">
-                                                        <i class="fa fa-shopping-cart"></i>
-                                                    </button>
-                                                    <a href="{% url 'pantry:remove_from_pantry' item.ingredient.id %}" 
-                                                       class="btn btn-link text-danger p-0"
-                                                       onclick="handleLoginRequiredAction(event, this.href)"
-                                                       title="Remove from pantry"
-                                                       data-bs-toggle="tooltip"
-                                                       data-bs-placement="top">
-                                                        <i class="fa fa-trash"></i>
-                                                    </a>
-                                                </div>
-                                            </div>
+                        <div class="list-group px-3 pt-3">
+                            {% for item in user_pantry|dictsort:"ingredient.name" %}
+                                <div class="list-group-item list-group-item-action" 
+                                     data-bs-toggle="modal" 
+                                     data-bs-target="#ingredientDetailsModal"
+                                     data-ingredient-id="{{ item.ingredient.id }}"
+                                     data-ingredient-name="{{ item.ingredient.name }}"
+                                     data-added-date="{{ item.added_at|date:'M d, Y' }}"
+                                     data-related-ingredients="{{ item.related_ingredients.all|join:',' }}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">{{ item.ingredient.name }}</h5>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <button class="btn btn-outline-success btn-sm" 
+                                                    onclick="event.stopPropagation();"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#relatedIngredientsModal"
+                                                    data-ingredient-id="{{ item.ingredient.id }}"
+                                                    data-ingredient-name="{{ item.ingredient.name }}">
+                                                Add Related Ingredients
+                                            </button>
+                                            <button class="btn btn-link text-primary p-0" 
+                                                    onclick="event.stopPropagation(); addToShoppingList({{ item.ingredient.id }})"
+                                                    title="Add to shopping list"
+                                                    data-bs-toggle="tooltip"
+                                                    data-bs-placement="top">
+                                                <i class="fa fa-shopping-cart"></i>
+                                            </button>
+                                            <a href="{% url 'pantry:remove_from_pantry' item.ingredient.id %}" 
+                                               class="btn btn-link text-danger p-0"
+                                               onclick="event.stopPropagation(); handleLoginRequiredAction(event, this.href)"
+                                               title="Remove from pantry"
+                                               data-bs-toggle="tooltip"
+                                               data-bs-placement="top">
+                                                <i class="fa fa-trash"></i>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
@@ -65,6 +67,30 @@
                         <!-- Results will be populated here via JavaScript -->
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ingredient Details Modal -->
+<div class="modal fade" id="ingredientDetailsModal" tabindex="-1" aria-labelledby="ingredientDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ingredientDetailsModalLabel">Ingredient Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h4 id="modalIngredientName" class="mb-3"></h4>
+                <p class="text-muted mb-4">Added: <span id="modalAddedDate"></span></p>
+                
+                <h5 class="mb-3">Related Ingredients</h5>
+                <div id="modalRelatedIngredients" class="d-flex flex-wrap gap-2">
+                    <!-- Related ingredients will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -185,7 +211,34 @@ function updateSelectedIngredients() {
     });
 }
 
-// Handle modal show event
+// Handle ingredient details modal show event
+document.getElementById('ingredientDetailsModal').addEventListener('show.bs.modal', function(event) {
+    const button = event.relatedTarget;
+    const ingredientName = button.getAttribute('data-ingredient-name');
+    const addedDate = button.getAttribute('data-added-date');
+    const relatedIngredients = button.getAttribute('data-related-ingredients').split(',').filter(Boolean);
+    
+    // Update modal content
+    document.getElementById('modalIngredientName').textContent = ingredientName;
+    document.getElementById('modalAddedDate').textContent = addedDate;
+    
+    // Update related ingredients
+    const relatedDiv = document.getElementById('modalRelatedIngredients');
+    relatedDiv.innerHTML = '';
+    
+    if (relatedIngredients.length > 0) {
+        relatedIngredients.forEach(ingredient => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-white text-dark border border-success';
+            badge.textContent = ingredient;
+            relatedDiv.appendChild(badge);
+        });
+    } else {
+        relatedDiv.innerHTML = '<p class="text-muted">No related ingredients added yet.</p>';
+    }
+});
+
+// Handle related ingredients modal show event
 document.getElementById('relatedIngredientsModal').addEventListener('show.bs.modal', function(event) {
     const button = event.relatedTarget;
     const ingredientId = button.getAttribute('data-ingredient-id');
@@ -308,6 +361,8 @@ document.getElementById('saveRelatedIngredients').addEventListener('click', func
         if (data.status === 'success') {
             // Close the modal
             bootstrap.Modal.getInstance(modal).hide();
+            // Refresh the page to show updated related ingredients
+            window.location.reload();
         } else {
             throw new Error(data.message || 'Failed to save related ingredients');
         }
