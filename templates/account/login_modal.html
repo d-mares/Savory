@@ -34,6 +34,11 @@
                             <i class="fas fa-exclamation-circle me-2"></i>
                             <span id="loginErrorText"></span>
                         </div>
+                        <!-- Verification Warning Alert -->
+                        <div id="verificationWarning" class="alert alert-warning mt-3 mb-0 d-none" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span>Your account is not verified. Please check your email for the verification link. <a href="#" id="resendLoginVerification" class="alert-link">Resend verification email</a></span>
+                        </div>
                     </form>
                     <div class="text-center mt-3">
                         <p class="mb-0">{% trans "Don't have an account?" %} <a href="#" class="text-primary toggle-form" data-form="signup">{% trans "Sign Up" %}</a></p>
@@ -51,10 +56,27 @@
                         <div class="mb-3">
                             <label for="id_password1" class="form-label">Password</label>
                             <input type="password" name="password1" class="form-control" id="id_password1" required>
+                            <div class="password-requirements mt-2">
+                                <small class="text-muted">Password must:</small>
+                                <ul class="list-unstyled mb-0">
+                                    <li id="length-check" class="text-danger">
+                                        <i class="fas fa-times-circle"></i> Be at least 8 characters long
+                                    </li>
+                                    <li id="numeric-check" class="text-danger">
+                                        <i class="fas fa-times-circle"></i> Not be entirely numeric
+                                    </li>
+                                    <li id="common-check" class="text-danger">
+                                        <i class="fas fa-times-circle"></i> Not be a common password
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label for="id_password2" class="form-label">Password (again)</label>
+                            <label for="id_password2" class="form-label">Password Confirmation</label>
                             <input type="password" name="password2" class="form-control" id="id_password2" required>
+                            <div id="password-match" class="text-danger mt-2 d-none">
+                                <i class="fas fa-times-circle"></i> Passwords do not match
+                            </div>
                         </div>
                         <input type="hidden" name="next" value="{{ request.path }}">
                         <div class="d-grid gap-2">
@@ -173,6 +195,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const signupErrorText = document.getElementById('signupErrorText');
     const signupSuccess = document.getElementById('signupSuccess');
     const resendVerification = document.getElementById('resendVerification');
+    const modal = document.getElementById('loginModal');
+    const backdrop = document.getElementById('loginBackdrop');
+
+    // Reset modal state when it's closed
+    if (modal) {
+        modal.addEventListener('hidden.bs.modal', function() {
+            // Reset forms
+            if (loginForm) loginForm.reset();
+            if (signupForm) signupForm.reset();
+            
+            // Hide all error messages
+            loginError.classList.add('d-none');
+            signupError.classList.add('d-none');
+            signupSuccess.classList.add('d-none');
+            
+            // Reset to login form by default
+            const loginFormDiv = document.getElementById('loginForm');
+            const signupFormDiv = document.getElementById('signupForm');
+            const modalTitle = document.getElementById('loginModalLabel');
+            
+            if (loginFormDiv && signupFormDiv && modalTitle) {
+                loginFormDiv.style.display = 'block';
+                signupFormDiv.style.display = 'none';
+                modalTitle.textContent = 'Sign In';
+            }
+        });
+    }
 
     // Handle form toggling
     document.querySelectorAll('.toggle-form').forEach(function(link) {
@@ -199,10 +248,103 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Handle signup form submission
+    // Password validation
+    const password1 = document.getElementById('id_password1');
+    const password2 = document.getElementById('id_password2');
+    const lengthCheck = document.getElementById('length-check');
+    const numericCheck = document.getElementById('numeric-check');
+    const commonCheck = document.getElementById('common-check');
+    const passwordMatch = document.getElementById('password-match');
+
+    // Common passwords list (you can expand this)
+    const commonPasswords = ['password', '12345678', 'qwerty', 'admin', 'welcome'];
+
+    function validatePassword() {
+        const password = password1.value;
+        let isValid = true;
+
+        // Check length
+        if (password.length >= 8) {
+            lengthCheck.classList.remove('text-danger');
+            lengthCheck.classList.add('text-success');
+            lengthCheck.querySelector('i').classList.remove('fa-times-circle');
+            lengthCheck.querySelector('i').classList.add('fa-check-circle');
+        } else {
+            lengthCheck.classList.remove('text-success');
+            lengthCheck.classList.add('text-danger');
+            lengthCheck.querySelector('i').classList.remove('fa-check-circle');
+            lengthCheck.querySelector('i').classList.add('fa-times-circle');
+            isValid = false;
+        }
+
+        // Check if entirely numeric
+        if (!/^\d+$/.test(password)) {
+            numericCheck.classList.remove('text-danger');
+            numericCheck.classList.add('text-success');
+            numericCheck.querySelector('i').classList.remove('fa-times-circle');
+            numericCheck.querySelector('i').classList.add('fa-check-circle');
+        } else {
+            numericCheck.classList.remove('text-success');
+            numericCheck.classList.add('text-danger');
+            numericCheck.querySelector('i').classList.remove('fa-check-circle');
+            numericCheck.querySelector('i').classList.add('fa-times-circle');
+            isValid = false;
+        }
+
+        // Check if common password
+        if (!commonPasswords.includes(password.toLowerCase())) {
+            commonCheck.classList.remove('text-danger');
+            commonCheck.classList.add('text-success');
+            commonCheck.querySelector('i').classList.remove('fa-times-circle');
+            commonCheck.querySelector('i').classList.add('fa-check-circle');
+        } else {
+            commonCheck.classList.remove('text-success');
+            commonCheck.classList.add('text-danger');
+            commonCheck.querySelector('i').classList.remove('fa-check-circle');
+            commonCheck.querySelector('i').classList.add('fa-times-circle');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    function checkPasswordMatch() {
+        if (password2.value && password1.value !== password2.value) {
+            passwordMatch.classList.remove('d-none');
+            return false;
+        } else {
+            passwordMatch.classList.add('d-none');
+            return true;
+        }
+    }
+
+    // Add event listeners for real-time validation
+    if (password1) {
+        password1.addEventListener('input', validatePassword);
+    }
+    if (password2) {
+        password2.addEventListener('input', checkPasswordMatch);
+    }
+
+    // Update signup form submission to include validation
     if (signupForm) {
         signupForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            
+            // Validate password before submission
+            if (!validatePassword() || !checkPasswordMatch()) {
+                signupErrorText.textContent = 'Please fix the password requirements before submitting.';
+                signupError.classList.remove('d-none');
+                signupSuccess.classList.add('d-none');
+                signupError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            
+            // Show loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
             
             const formData = new FormData(this);
             
@@ -235,9 +377,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                          doc.querySelector('.non-field-errors');
                     
                     // Check for field-specific errors
-                    const emailErrors = doc.querySelector('#id_email').closest('.form-group')?.querySelector('.errorlist');
-                    const password1Errors = doc.querySelector('#id_password1').closest('.form-group')?.querySelector('.errorlist');
-                    const password2Errors = doc.querySelector('#id_password2').closest('.form-group')?.querySelector('.errorlist');
+                    const emailErrors = doc.querySelector('#id_email')?.closest('.form-group')?.querySelector('.errorlist');
+                    const password1Errors = doc.querySelector('#id_password1')?.closest('.form-group')?.querySelector('.errorlist');
+                    const password2Errors = doc.querySelector('#id_password2')?.closest('.form-group')?.querySelector('.errorlist');
                     
                     // Compile all errors
                     let errorMessage = '';
@@ -260,6 +402,166 @@ document.addEventListener('DOMContentLoaded', function() {
                 signupError.classList.remove('d-none');
                 signupSuccess.classList.add('d-none');
                 signupError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            })
+            .finally(() => {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            });
+        });
+    }
+
+    // Handle login form submission
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show loading state
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Signing in...';
+            
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    // Check if the response has a verification warning header
+                    const isUnverified = response.headers.get('X-Account-Unverified') === 'true';
+                    if (isUnverified) {
+                        // Show verification warning
+                        const verificationWarning = document.getElementById('verificationWarning');
+                        verificationWarning.classList.remove('d-none');
+                        verificationWarning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
+                        // Close the modal after a short delay
+                        setTimeout(() => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+                            if (modal) {
+                                modal.hide();
+                            }
+                            // Redirect to home page
+                            window.location.href = response.url;
+                        }, 2000);
+                    } else {
+                        // Normal successful login
+                        window.location.href = response.url;
+                    }
+                } else {
+                    return response.text();
+                }
+            })
+            .then(html => {
+                if (html) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Check for form errors
+                    const nonFieldErrors = doc.querySelector('.errorlist.nonfield') || 
+                                         doc.querySelector('.non-field-errors');
+                    
+                    // Check for field-specific errors
+                    const emailErrors = doc.querySelector('#id_login')?.closest('.form-group')?.querySelector('.errorlist');
+                    const passwordErrors = doc.querySelector('#id_password')?.closest('.form-group')?.querySelector('.errorlist');
+                    
+                    // Check for Django messages
+                    const messages = doc.querySelector('.messages');
+                    let errorMessage = '';
+                    
+                    if (messages) {
+                        const messageItems = messages.querySelectorAll('li');
+                        messageItems.forEach(item => {
+                            if (item.classList.contains('error')) {
+                                errorMessage += item.textContent.trim() + ' ';
+                            }
+                        });
+                    }
+                    
+                    // Add form errors if no message errors found
+                    if (!errorMessage) {
+                        if (nonFieldErrors) errorMessage += nonFieldErrors.textContent.trim();
+                        if (emailErrors) errorMessage += ' ' + emailErrors.textContent.trim();
+                        if (passwordErrors) errorMessage += ' ' + passwordErrors.textContent.trim();
+                    }
+                    
+                    // Make error messages more user-friendly
+                    errorMessage = errorMessage.replace('The e-mail address and/or password you specified are not correct.', 'Invalid email or password. Please try again.');
+                    errorMessage = errorMessage.replace('This account is currently inactive.', 'This account is inactive. Please contact support.');
+                    
+                    if (errorMessage.trim()) {
+                        loginErrorText.textContent = errorMessage.trim();
+                        loginError.classList.remove('d-none');
+                        loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        // If no specific error message found, show a generic one
+                        loginErrorText.textContent = 'Invalid email or password. Please try again.';
+                        loginError.classList.remove('d-none');
+                        loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loginErrorText.textContent = 'An error occurred. Please try again.';
+                loginError.classList.remove('d-none');
+                loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            })
+            .finally(() => {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            });
+        });
+    }
+
+    // Handle resend verification email for login
+    const resendLoginVerification = document.getElementById('resendLoginVerification');
+    if (resendLoginVerification) {
+        resendLoginVerification.addEventListener('click', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('id_login').value;
+            
+            // Show loading state
+            const originalText = this.textContent;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Resending...';
+            this.style.pointerEvents = 'none';
+            
+            fetch('{% url "users:resend_verification_email" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const verificationWarning = document.getElementById('verificationWarning');
+                    verificationWarning.querySelector('span').textContent = 'Verification email resent. Please check your inbox.';
+                } else {
+                    loginErrorText.textContent = data.error || 'Failed to resend verification email. Please try again.';
+                    loginError.classList.remove('d-none');
+                    document.getElementById('verificationWarning').classList.add('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loginErrorText.textContent = 'An error occurred while resending the verification email.';
+                loginError.classList.remove('d-none');
+                document.getElementById('verificationWarning').classList.add('d-none');
+            })
+            .finally(() => {
+                // Reset button state
+                this.innerHTML = originalText;
+                this.style.pointerEvents = 'auto';
             });
         });
     }
@@ -269,6 +571,11 @@ document.addEventListener('DOMContentLoaded', function() {
         resendVerification.addEventListener('click', function(e) {
             e.preventDefault();
             const email = document.getElementById('id_email').value;
+            
+            // Show loading state
+            const originalText = this.textContent;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Resending...';
+            this.style.pointerEvents = 'none';
             
             fetch('{% url "users:resend_verification_email" %}', {
                 method: 'POST',
@@ -293,77 +600,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 signupErrorText.textContent = 'An error occurred while resending the verification email.';
                 signupError.classList.remove('d-none');
                 signupSuccess.classList.add('d-none');
-            });
-        });
-    }
-
-    // Handle login form submission
-    if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            fetch(this.action, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token }}'
-                }
             })
-            .then(response => {
-                if (response.redirected) {
-                    window.location.href = response.url;
-                } else {
-                    return response.text();
-                }
-            })
-            .then(html => {
-                if (html) {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    // Check for form errors
-                    const nonFieldErrors = doc.querySelector('.errorlist.nonfield') || 
-                                         doc.querySelector('.non-field-errors');
-                    
-                    // Check for field-specific errors
-                    const emailErrors = doc.querySelector('#id_login').closest('.form-group')?.querySelector('.errorlist');
-                    const passwordErrors = doc.querySelector('#id_password').closest('.form-group')?.querySelector('.errorlist');
-                    
-                    // Compile all errors
-                    let errorMessage = '';
-                    if (nonFieldErrors) errorMessage += nonFieldErrors.textContent.trim();
-                    if (emailErrors) errorMessage += ' ' + emailErrors.textContent.trim();
-                    if (passwordErrors) errorMessage += ' ' + passwordErrors.textContent.trim();
-                    
-                    if (errorMessage.trim()) {
-                        loginErrorText.textContent = errorMessage.trim();
-                        loginError.classList.remove('d-none');
-                        loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                loginErrorText.textContent = 'An error occurred. Please try again.';
-                loginError.classList.remove('d-none');
-                loginError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            .finally(() => {
+                // Reset button state
+                this.innerHTML = originalText;
+                this.style.pointerEvents = 'auto';
             });
         });
     }
 
     // Handle modal backdrop
-    const modal = document.getElementById('loginModal');
-    const backdrop = document.getElementById('loginBackdrop');
-    
     if (modal) {
-        modal.addEventListener('show.bs.modal', function() {
+        modal.addEventListener('show.bs.modal', function(event) {
             backdrop.style.display = 'block';
             setTimeout(() => backdrop.classList.add('show'), 10);
             // Clear any previous errors when modal is opened
             loginError.classList.add('d-none');
             signupError.classList.add('d-none');
+            
+            // Check if the modal was opened with a specific form
+            const trigger = event.relatedTarget;
+            if (trigger && trigger.dataset.form === 'signup') {
+                const loginForm = document.getElementById('loginForm');
+                const signupForm = document.getElementById('signupForm');
+                const modalTitle = document.getElementById('loginModalLabel');
+                
+                if (loginForm && signupForm && modalTitle) {
+                    loginForm.style.display = 'none';
+                    signupForm.style.display = 'block';
+                    modalTitle.textContent = 'Sign Up';
+                }
+            }
         });
         
         modal.addEventListener('hide.bs.modal', function() {

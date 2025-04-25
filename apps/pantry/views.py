@@ -10,14 +10,18 @@ import urllib.parse
 from django.db import transaction
 from django.db.utils import OperationalError
 import time
+from django.core.paginator import Paginator
+from django.db.models import Count
 
 # Create your views here.
 
 @login_required
 def pantry_list(request):
     user_pantry = UserPantry.objects.filter(user=request.user)
+    pantry_count = user_pantry.count()
     return render(request, 'pantry/pantry_list.html', {
         'user_pantry': user_pantry,
+        'pantry_count': pantry_count,
     })
 
 @login_required
@@ -92,9 +96,17 @@ def save_related_ingredients(request, ingredient_id):
 @login_required
 def add_to_pantry(request, ingredient_id):
     ingredient = get_object_or_404(Ingredient, id=ingredient_id)
-    UserPantry.objects.get_or_create(user=request.user, ingredient=ingredient)
-    messages.success(request, f'Added {ingredient.name} to your pantry')
-    return redirect('pantry:pantry_list')
+    try:
+        UserPantry.objects.get_or_create(user=request.user, ingredient=ingredient)
+        return JsonResponse({
+            'success': True,
+            'message': f'Added {ingredient.name} to your pantry'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
 
 @login_required
 def remove_from_pantry(request, ingredient_id):
@@ -114,3 +126,43 @@ def add_ingredient(request):
     else:
         form = IngredientForm()
     return render(request, 'pantry/add_ingredient.html', {'form': form})
+
+@login_required
+def suggested_ingredients(request):
+    page = request.GET.get('page', 1)
+    try:
+        page = int(page)
+    except ValueError:
+        page = 1
+    
+    # Get user's pantry ingredients first
+    user_pantry_ingredients = UserPantry.objects.filter(
+        user=request.user
+    ).values_list('ingredient_id', flat=True)
+    
+    # Get ingredients ordered by number of recipes that use them, excluding user's pantry
+    ingredients = Ingredient.objects.annotate(
+        recipe_count=Count('recipeingredient__recipe', distinct=True)
+    ).exclude(id__in=user_pantry_ingredients).order_by('-recipe_count', 'name')[:100]
+    
+    # Paginate results
+    paginator = Paginator(ingredients, 20)  # Show 20 items per page
+    try:
+        page_obj = paginator.page(page)
+    except:
+        page_obj = paginator.page(1)
+    
+    return JsonResponse({
+        'ingredients': [
+            {
+                'id': ingredient.id,
+                'name': ingredient.name,
+                'recipe_count': ingredient.recipe_count
+            }
+            for ingredient in page_obj
+        ],
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+        'current_page': page_obj.number,
+        'total_pages': paginator.num_pages
+    })

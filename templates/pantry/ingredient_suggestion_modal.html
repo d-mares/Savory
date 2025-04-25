@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Ingredient Suggestion Modal -->
+<div class="modal fade" id="ingredientSuggestionModal" tabindex="-1" aria-labelledby="ingredientSuggestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: var(--primary-green); color: white;">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-utensils fa-2x me-3"></i>
+                    <h5 class="modal-title" id="ingredientSuggestionModalLabel">Enhance Your Pantry</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="lead">Add ingredients to your pantry to discover more recipes!</p>
+                <div id="suggestionResults" class="list-group">
+                    <!-- Results will be populated here via JavaScript -->
+                </div>
+                <div id="suggestionPagination" class="d-flex justify-content-center mt-3">
+                    <nav aria-label="Ingredient suggestions navigation">
+                        <ul class="pagination">
+                            <li class="page-item disabled" id="prevPage">
+                                <a class="page-link" href="#" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item disabled" id="nextPage">
+                                <a class="page-link" href="#" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'pantry:pantry_list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus-circle me-2"></i>Add More Ingredients
+                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPage = 1;
+const itemsPerPage = 20;
+
+function loadSuggestedIngredients(page = 1) {
+    const resultsDiv = document.getElementById('suggestionResults');
+    resultsDiv.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    
+    fetch(`/pantry/suggested-ingredients/?page=${page}`)
+        .then(response => response.json())
+        .then(data => {
+            resultsDiv.innerHTML = '';
+            
+            if (data.ingredients.length === 0) {
+                resultsDiv.innerHTML = '<div class="text-center text-muted">No more ingredients to add!</div>';
+                return;
+            }
+            
+            data.ingredients.forEach(ingredient => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = ingredient.name;
+                
+                const addButton = document.createElement('button');
+                addButton.className = 'btn btn-outline-success btn-sm';
+                addButton.innerHTML = '<i class="fas fa-plus"></i>';
+                addButton.onclick = function() {
+                    addToPantry(ingredient.id, ingredient.name);
+                };
+                
+                item.appendChild(nameSpan);
+                item.appendChild(addButton);
+                resultsDiv.appendChild(item);
+            });
+            
+            // Update pagination
+            const prevPage = document.getElementById('prevPage');
+            const nextPage = document.getElementById('nextPage');
+            
+            prevPage.classList.toggle('disabled', page === 1);
+            nextPage.classList.toggle('disabled', !data.has_next);
+            
+            prevPage.querySelector('a').onclick = function(e) {
+                e.preventDefault();
+                if (page > 1) {
+                    loadSuggestedIngredients(page - 1);
+                }
+            };
+            
+            nextPage.querySelector('a').onclick = function(e) {
+                e.preventDefault();
+                if (data.has_next) {
+                    loadSuggestedIngredients(page + 1);
+                }
+            };
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resultsDiv.innerHTML = '<div class="text-center text-danger">Error loading ingredients. Please try again.</div>';
+        });
+}
+
+function addToPantry(ingredientId, ingredientName) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/pantry/add/${ingredientId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the ingredient from the list
+            const items = document.querySelectorAll('#suggestionResults .list-group-item');
+            items.forEach(item => {
+                if (item.querySelector('span').textContent === ingredientName) {
+                    item.remove();
+                }
+            });
+            
+            // Show success message
+            const toast = document.createElement('div');
+            toast.className = 'toast position-fixed bottom-0 end-0 m-3';
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="toast-header bg-success text-white">
+                    <strong class="me-auto">Success</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">
+                    Added ${ingredientName} to your pantry
+                </div>
+            `;
+            document.body.appendChild(toast);
+            new bootstrap.Toast(toast).show();
+            
+            // Remove toast after it's hidden
+            toast.addEventListener('hidden.bs.toast', function() {
+                toast.remove();
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error adding the ingredient to your pantry. Please try again.');
+    });
+}
+
+// Show modal when page loads if user has less than 20 ingredients
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('ingredientSuggestionModal');
+    if ({{ pantry_count }} < 20) {
+        const bsModal = new bootstrap.Modal(modal);
+        modal.addEventListener('shown.bs.modal', function() {
+            loadSuggestedIngredients(1);
+        });
+        bsModal.show();
+    }
+});
+</script>
+{% endblock %} 

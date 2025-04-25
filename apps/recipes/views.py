@@ -18,15 +18,19 @@ def home(request):
     """Home page view."""
     carousel_items = CarouselItem.objects.select_related('recipe').all()
     user_recipe_collection = None
+    pantry_count = 0
     
     if request.user.is_authenticated:
         user_recipe_collection = Recipe.objects.filter(
             collected_by__user=request.user
         )
+        from apps.pantry.models import UserPantry
+        pantry_count = UserPantry.objects.filter(user=request.user).count()
     
     context = {
         'carousel_items': carousel_items,
         'user_recipe_collection': user_recipe_collection,
+        'pantry_count': pantry_count,
     }
     return render(request, 'recipes/home.html', context)
 

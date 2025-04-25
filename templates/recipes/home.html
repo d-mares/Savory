@@ -69,7 +69,7 @@
                 <p class="mb-4">Join Savory to start managing your recipes, create shopping lists, and track your pantry.</p>
                 <div class="d-grid gap-2 d-md-block">
                     <a href="#" class="btn btn-primary me-md-2" data-bs-toggle="modal" data-bs-target="#loginModal">Log In</a>
-                    <a href="#" class="btn btn-outline-primary me-md-2" data-bs-toggle="modal" data-bs-target="#loginModal">Sign Up</a>
+                    <a href="#" class="btn btn-outline-primary me-md-2" data-bs-toggle="modal" data-bs-target="#loginModal" data-form="signup">Sign Up</a>
                 </div>
             </div>
         </div>
@@ -127,26 +127,26 @@
     {% endif %}
 </div>
 
-<script>
-function scrollCards(direction) {
-    const container = document.querySelector('.recipe-cards-container');
-    const scrollAmount = 420; // Updated to match new card width + gap
-    
-    if (direction === 'left') {
-        container.scrollBy({
-            left: -scrollAmount,
-            behavior: 'smooth'
-        });
-    } else {
-        container.scrollBy({
-            left: scrollAmount,
-            behavior: 'smooth'
-        });
-    }
-}
+{% if user.is_authenticated %}
+    {% include 'pantry/ingredient_suggestion_modal.html' %}
+{% endif %}
+{% endblock %}
 
-// Handle heart icon clicks
+{% block extra_js %}
+<script>
+// Initialize scroll functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Add scroll event listener for navbar
+    window.addEventListener('scroll', function() {
+        const navbar = document.querySelector('.navbar');
+        if (window.scrollY > 50) {
+            navbar.classList.add('scrolled');
+        } else {
+            navbar.classList.remove('scrolled');
+        }
+    });
+
+    // Handle heart icon clicks
     document.querySelectorAll('.heart-link').forEach(function(link) {
         link.addEventListener('click', function(e) {
             e.preventDefault();
@@ -194,5 +194,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Function to handle login-required actions
+function handleLoginRequiredAction(event, actionUrl) {
+    window.location.href = actionUrl;
+}
+
+// Function to scroll recipe cards
+function scrollCards(direction) {
+    const container = document.querySelector('.recipe-cards-container');
+    const scrollAmount = 420; // Updated to match new card width + gap
+    
+    if (direction === 'left') {
+        container.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+        });
+    } else {
+        container.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+        });
+    }
+}
 </script>
 {% endblock %}

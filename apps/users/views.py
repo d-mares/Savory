@@ -11,7 +11,9 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from allauth.account.models import EmailAddress
 from allauth.account.utils import send_email_confirmation
-from allauth.account.views import PasswordResetFromKeyView
+from allauth.account.views import PasswordResetFromKeyView, LoginView as AllAuthLoginView
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
 # Create your views here.
 
@@ -138,3 +140,53 @@ class CustomPasswordResetFromKeyView(PasswordResetFromKeyView):
     def get_success_url(self):
         messages.success(self.request, 'Your password has been successfully changed.')
         return 'home'
+
+class CustomLoginView(AllAuthLoginView):
+    def form_valid(self, form):
+        try:
+            response = super().form_valid(form)
+            
+            # Check if the user's email is verified
+            if self.request.user.is_authenticated:
+                email_address = EmailAddress.objects.get_for_user(self.request.user, self.request.user.email)
+                if not email_address.verified:
+                    # Add a header to indicate unverified account
+                    response['X-Account-Unverified'] = 'true'
+                    
+                    # Add a message to inform the user
+                    messages.warning(
+                        self.request,
+                        'Your account is not verified. Please check your email for the verification link. '
+                        'Your account may be subject to deletion if not verified.'
+                    )
+                    
+                    # Override the success URL to go to home instead of confirm email
+                    self.success_url = reverse('home')
+            
+            return response
+        except Exception as e:
+            # Handle login errors
+            messages.error(self.request, str(e))
+            return self.form_invalid(form)
+
+    def form_invalid(self, form):
+        response = super().form_invalid(form)
+        # Add error messages to the response
+        if self.request.is_ajax():
+            return JsonResponse({
+                'error': form.errors,
+                'messages': [{'message': msg.message, 'level': msg.level} for msg in messages.get_messages(self.request)]
+            })
+        return response
+
+    def get_success_url(self):
+        # If the request is AJAX, return a JSON response instead of redirecting
+        if self.request.is_ajax():
+            return JsonResponse({
+                'success': True,
+                'redirect_url': super().get_success_url()
+            })
+        return super().get_success_url()
+
+# Update the login view in urls.py
+login = CustomLoginView.as_view()

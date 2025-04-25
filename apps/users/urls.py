@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from allauth.account.views import PasswordResetView, PasswordResetDoneView
-from .views import CustomPasswordResetFromKeyView
+from .views import CustomPasswordResetFromKeyView, CustomLoginView
 
 urlpatterns = [
     path('signup/', views.signup, name='signup'),
@@ -12,4 +12,5 @@ urlpatterns = [
     path('password/reset/', PasswordResetView.as_view(), name='account_reset_password'),
     path('password/reset/done/', PasswordResetDoneView.as_view(), name='account_reset_password_done'),
     path('password/reset/key/<str:uidb36>-<str:key>/', CustomPasswordResetFromKeyView.as_view(), name='account_reset_password_from_key'),
+    path('login/', CustomLoginView.as_view(), name='account_login'),
 ]

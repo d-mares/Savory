@@ -57,6 +57,27 @@
         </div>
         
         <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h3>About Your Pantry</h3>
+                    <div class="mb-3">
+                        <h5><i class="fas fa-info-circle me-2"></i>What is the Pantry?</h5>
+                        <p>Your pantry helps you track the ingredients you have available. This allows us to show you recipes that you can make with what you have on hand.</p>
+                    </div>
+                    <div class="mb-3">
+                        <h5><i class="fas fa-link me-2"></i>Related Ingredients</h5>
+                        <p>Adding related ingredients helps you discover more recipes. For example, if you have "olive oil", you might want to add "extra virgin olive oil" as a related ingredient. This way, you'll see recipes that use either type of olive oil.</p>
+                    </div>
+                    <div class="mb-3">
+                        <h5><i class="fas fa-lightbulb me-2"></i>Tips</h5>
+                        <ul>
+                            <li>Add ingredients you commonly use</li>
+                            <li>Include related ingredients to see more recipe options</li>
+                            <li>Keep your pantry updated to get the most relevant recipe suggestions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="card">
                 <div class="card-body">
                     <h3>Add Ingredients</h3>
@@ -71,6 +92,8 @@
         </div>
     </div>
 </div>
+
+{% include 'pantry/ingredient_suggestion_modal.html' %}
 
 <!-- Ingredient Details Modal -->
 <div class="modal fade" id="ingredientDetailsModal" tabindex="-1" aria-labelledby="ingredientDetailsModalLabel" aria-hidden="true">
@@ -390,5 +413,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-{% endblock %}
 {% endblock %} 

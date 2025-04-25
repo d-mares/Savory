@@ -4,12 +4,15 @@
 {% block title %}Sign Out - Savory{% endblock %}
 
 {% block content %}
-<div class="container d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 60px);">
-    <div class="row w-100">
-        <div class="col-md-6 offset-md-3">
-            <div class="card">
-                <div class="card-header" style="background-color: var(--cal-poly-green); color: var(--mint-cream);">
-                    <h2 class="mb-0">Sign Out</h2>
+<div class="container py-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background-color: var(--primary-green); color: white;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-sign-out-alt fa-2x me-3"></i>
+                        <h2 class="mb-0">{% trans "Sign Out" %}</h2>
+                    </div>
                 </div>
                 <div class="card-body">
                     <p class="lead">{% trans 'Are you sure you want to sign out?' %}</p>
@@ -19,11 +22,11 @@
                             <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}"/>
                         {% endif %}
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn" style="background-color: var(--cal-poly-green); color: var(--mint-cream);">
-                                <i class="fa fa-sign-out-alt me-2"></i>{% trans 'Sign Out' %}
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i>{% trans 'Sign Out' %}
                             </button>
-                            <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary">
-                                <i class="fa fa-times me-2"></i>{% trans 'Cancel' %}
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans 'Cancel' %}
                             </a>
                         </div>
                     </form>
